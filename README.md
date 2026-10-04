@@ -69,6 +69,17 @@ Buka **Pengaturan → Peraturan → Tambah peraturan baru**. Wizard enam langkah
 ### Teknologi
 Next.js 15 (App Router) · TypeScript · Tailwind CSS 4 + shadcn/ui · PostgreSQL di Supabase (postgres.js) · Supabase Storage (bucket privat) · Clerk (Google + email, allowlist, 2FA) · docxtemplater · SheetJS & ExcelJS · Recharts · Vitest · Vercel.
 
+### Mengembangkan di PC lain
+Panduan langkah demi langkah (clone, ambil kunci dari Vercel, alur pull/push): **[documentation/PANDUAN-PC-LAIN.md](documentation/PANDUAN-PC-LAIN.md)**.
+
+```bash
+git clone https://github.com/mfp-max/simpel-disiplin.git
+cd simpel-disiplin && npm install
+vercel link --yes --project simpel-um
+vercel env pull .env.local --environment=development --yes
+npm run dev
+```
+
 ### Menjalankan lokal
 ```bash
 npm install
