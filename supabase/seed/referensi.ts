@@ -92,6 +92,10 @@ export const PENGATURAN = [
   { kunci: "retensi_rekaman_hari", label: "Retensi rekaman audio (hari setelah kasus selesai/dihentikan)", kelompok: "sistem", nilai: 90, urutan: 21 },
   { kunci: "batas_idle_menit", label: "Keluar otomatis setelah tidak aktif (menit)", kelompok: "sistem", nilai: 30, urutan: 22 },
   { kunci: "simpan_otomatis_detik", label: "Interval simpan otomatis mode sidang (detik)", kelompok: "sistem", nilai: 5, urutan: 23 },
+  { kunci: "ambang_dekat_kehadiran_hari", label: "Peringatan ambang kehadiran (hari sebelum ambang berikutnya)", kelompok: "sistem", nilai: 2, urutan: 24 },
+  { kunci: "sifat_surat", label: "Sifat surat bawaan", kelompok: "instansi", nilai: "Rahasia", urutan: 6 },
+  { kunci: "lampiran_surat", label: "Lampiran surat bawaan", kelompok: "instansi", nilai: "-", urutan: 7 },
+  { kunci: "teks_pemotongan_ik", label: "Kalimat pemotongan insentif kinerja di dokumen", kelompok: "instansi", nilai: "disertai pemotongan insentif kinerja sesuai Peraturan Rektor tentang Insentif Kinerja", urutan: 8 },
   { kunci: "simpega_api", label: "API Simpega", kelompok: "integrasi", nilai: { aktif: false }, urutan: 30, keterangan: "Belum dikonfigurasi. Endpoint dan kunci diisi lewat variabel lingkungan SIMPEGA_API_URL / SIMPEGA_API_KEY." },
 ];
 
@@ -155,4 +159,19 @@ export const HARI_LIBUR = [
 export const POLA_UNIT_DELEGASI = [
   "Fakultas", "Sekolah Pascasarjana", "Lembaga Penelitian dan Pengabdian", "Lembaga Pengembangan Pendidikan",
   "Badan Pengembangan Inovasi", "Badan Penjaminan Mutu", "Badan Pengelola Usaha", "Sekretariat Universitas", "Direktorat", "UPT",
+];
+
+// Bank pertanyaan substansi (contoh; disunting di Pengaturan → Pertanyaan pemeriksaan)
+const SET_HADIR = "Ketidakhadiran kerja";
+const SET_WEWENANG = "Penyalahgunaan wewenang / pungutan";
+export const BANK_PERTANYAAN = [
+  { nama_set: SET_HADIR, jenis_pelanggaran: "kehadiran", urutan: 1, pertanyaan: "Pada tanggal berapa saja Saudara tidak masuk kerja?" },
+  { nama_set: SET_HADIR, jenis_pelanggaran: "kehadiran", urutan: 2, pertanyaan: "Apa alasan Saudara tidak masuk kerja pada tanggal-tanggal tersebut?" },
+  { nama_set: SET_HADIR, jenis_pelanggaran: "kehadiran", urutan: 3, pertanyaan: "Apakah Saudara telah mengajukan izin atau cuti kepada atasan? Jika ya, mohon tunjukkan buktinya." },
+  { nama_set: SET_HADIR, jenis_pelanggaran: "kehadiran", urutan: 4, pertanyaan: "Apakah Saudara mengetahui ketentuan jam kerja dan kewajiban masuk kerja?" },
+  { nama_set: SET_HADIR, jenis_pelanggaran: "kehadiran", urutan: 5, pertanyaan: "Apakah rekapitulasi ketidakhadiran yang ditunjukkan kepada Saudara sudah sesuai?" },
+  { nama_set: SET_WEWENANG, jenis_pelanggaran: "wewenang", urutan: 1, pertanyaan: "Apa tugas dan kewenangan Saudara dalam jabatan saat ini?" },
+  { nama_set: SET_WEWENANG, jenis_pelanggaran: "wewenang", urutan: 2, pertanyaan: "Apakah Saudara pernah menerima atau meminta sesuatu yang berhubungan dengan jabatan Saudara?" },
+  { nama_set: SET_WEWENANG, jenis_pelanggaran: "wewenang", urutan: 3, pertanyaan: "Siapa saja pihak yang terlibat dan bagaimana alurnya?" },
+  { nama_set: SET_WEWENANG, jenis_pelanggaran: "wewenang", urutan: 4, pertanyaan: "Apakah ada dokumen atau bukti yang dapat Saudara tunjukkan terkait hal tersebut?" },
 ];

@@ -44,3 +44,16 @@ export const sql: postgres.Sql = new Proxy(function () {} as unknown as postgres
 
 export type Sql = postgres.Sql;
 export type Tx = postgres.TransactionSql;
+
+/**
+ * Menjalankan fn di dalam satu transaksi. Semua perubahan batal bila ada galat.
+ * Contoh: await transaksi(async (tx) => { await tx`insert ...`; });
+ */
+export async function transaksi<T>(fn: (tx: Sql) => Promise<T>): Promise<T> {
+  return (await sql.begin((tx) => fn(tx as unknown as Sql))) as T;
+}
+
+/** Izinkan koreksi salah ketik pada katalog yang sudah dipakai (wajib dicatat di audit_log dengan alasan). */
+export async function izinkanKoreksi(tx: Sql) {
+  await tx`select set_config('simpel.izin_koreksi', '1', true)`;
+}

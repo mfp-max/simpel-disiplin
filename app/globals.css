@@ -6,9 +6,17 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-parkinsans: var(--font-parkinsans);
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Ukuran huruf: teks isi minimal 15px (PRD §12) */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.15rem;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.4rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.55rem;
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -38,6 +46,20 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-emas: var(--emas);
+
+  /* Warna status yang konsisten di seluruh aplikasi */
+  --color-aman: var(--aman);
+  --color-aman-muda: var(--aman-muda);
+  --color-waspada: var(--waspada);
+  --color-waspada-muda: var(--waspada-muda);
+  --color-lewat: var(--lewat);
+  --color-lewat-muda: var(--lewat-muda);
+  --color-arsip: var(--arsip);
+  --color-arsip-muda: var(--arsip-muda);
+  --color-info: var(--info);
+  --color-info-muda: var(--info-muda);
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -45,79 +67,183 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
+  --radius: 0.75rem;
+  /* Latar abu-abu sangat muda — senada dengan berkas form-background UM */
+  --background: oklch(0.966 0.002 260);
+  --foreground: oklch(0.2 0.03 262);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
+  --card-foreground: oklch(0.2 0.03 262);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+  --popover-foreground: oklch(0.2 0.03 262);
+  /* Biru tua UM (diambil dari logo) */
+  --primary: oklch(0.37 0.1 262);
+  --primary-foreground: oklch(0.985 0.002 260);
+  --secondary: oklch(0.95 0.012 262);
+  --secondary-foreground: oklch(0.3 0.08 262);
+  --muted: oklch(0.955 0.004 260);
+  --muted-foreground: oklch(0.47 0.02 262);
+  --accent: oklch(0.94 0.018 262);
+  --accent-foreground: oklch(0.3 0.08 262);
+  --destructive: oklch(0.55 0.21 27);
+  --border: oklch(0.9 0.006 260);
+  --input: oklch(0.86 0.008 260);
+  --ring: oklch(0.55 0.12 262);
+  --emas: oklch(0.8 0.15 85);
+
+  --aman: oklch(0.5 0.13 155);
+  --aman-muda: oklch(0.95 0.04 155);
+  --waspada: oklch(0.55 0.13 70);
+  --waspada-muda: oklch(0.96 0.06 90);
+  --lewat: oklch(0.53 0.2 27);
+  --lewat-muda: oklch(0.95 0.035 27);
+  --arsip: oklch(0.5 0.01 260);
+  --arsip-muda: oklch(0.94 0.004 260);
+  --info: oklch(0.48 0.12 262);
+  --info-muda: oklch(0.95 0.025 262);
+
+  --chart-1: oklch(0.45 0.12 262);
+  --chart-2: oklch(0.7 0.14 75);
+  --chart-3: oklch(0.6 0.12 180);
+  --chart-4: oklch(0.6 0.16 25);
+  --chart-5: oklch(0.55 0.1 310);
+
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.25 0.03 262);
+  --sidebar-primary: oklch(0.37 0.1 262);
+  --sidebar-primary-foreground: oklch(0.985 0.002 260);
+  --sidebar-accent: oklch(0.95 0.015 262);
+  --sidebar-accent-foreground: oklch(0.3 0.09 262);
+  --sidebar-border: oklch(0.91 0.006 260);
+  --sidebar-ring: oklch(0.55 0.12 262);
+
+  /* Pola logo UM di latar */
+  --pola: oklch(0.2 0.02 262 / 0.05);
 }
 
 .dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --background: oklch(0.17 0.02 262);
+  --foreground: oklch(0.95 0.005 260);
+  --card: oklch(0.215 0.022 262);
+  --card-foreground: oklch(0.95 0.005 260);
+  --popover: oklch(0.23 0.022 262);
+  --popover-foreground: oklch(0.95 0.005 260);
+  --primary: oklch(0.78 0.09 262);
+  --primary-foreground: oklch(0.18 0.03 262);
+  --secondary: oklch(0.28 0.03 262);
+  --secondary-foreground: oklch(0.93 0.01 260);
+  --muted: oklch(0.26 0.02 262);
+  --muted-foreground: oklch(0.74 0.015 262);
+  --accent: oklch(0.3 0.035 262);
+  --accent-foreground: oklch(0.95 0.005 260);
+  --destructive: oklch(0.68 0.19 25);
+  --border: oklch(1 0 0 / 11%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.7 0.1 262);
+  --emas: oklch(0.82 0.14 85);
+
+  --aman: oklch(0.78 0.14 155);
+  --aman-muda: oklch(0.32 0.06 155);
+  --waspada: oklch(0.84 0.14 85);
+  --waspada-muda: oklch(0.34 0.07 75);
+  --lewat: oklch(0.75 0.16 25);
+  --lewat-muda: oklch(0.33 0.08 25);
+  --arsip: oklch(0.75 0.01 260);
+  --arsip-muda: oklch(0.3 0.01 260);
+  --info: oklch(0.8 0.09 262);
+  --info-muda: oklch(0.3 0.05 262);
+
+  --chart-1: oklch(0.72 0.12 262);
+  --chart-2: oklch(0.8 0.14 80);
+  --chart-3: oklch(0.72 0.12 180);
+  --chart-4: oklch(0.7 0.16 25);
+  --chart-5: oklch(0.72 0.12 310);
+
+  --sidebar: oklch(0.2 0.022 262);
+  --sidebar-foreground: oklch(0.93 0.008 260);
+  --sidebar-primary: oklch(0.78 0.09 262);
+  --sidebar-primary-foreground: oklch(0.18 0.03 262);
+  --sidebar-accent: oklch(0.28 0.03 262);
+  --sidebar-accent-foreground: oklch(0.95 0.005 260);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: oklch(0.7 0.1 262);
+
+  /* Mode gelap: pola dibuat terang samar di atas latar gelap */
+  --pola: oklch(1 0 0 / 0.022);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-size: 1rem;
+    min-height: 100dvh;
+  }
+  /* Latar identitas UM: pola logo yang warnanya mengikuti tema */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-color: var(--pola);
+    -webkit-mask-image: url("/pola-um.png");
+    mask-image: url("/pola-um.png");
+    -webkit-mask-size: 280px auto;
+    mask-size: 280px auto;
+    -webkit-mask-repeat: repeat;
+    mask-repeat: repeat;
+  }
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 25%, transparent);
+  }
+  :focus-visible {
+    outline: 3px solid color-mix(in oklch, var(--ring) 70%, transparent);
+    outline-offset: 2px;
+  }
+}
+
+/* Mode privasi: nama dan NIP disamarkan di layar (PRD §11 butir 6) */
+.mode-privasi [data-pii] {
+  filter: blur(6px);
+  transition: filter 0.15s;
+  user-select: none;
+}
+.mode-privasi [data-pii]:hover {
+  filter: blur(6px);
+}
+
+/* Indikator rekam yang mencolok */
+@keyframes kedip-rekam {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.kedip-rekam {
+  animation: kedip-rekam 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Cetak: tanda RAHASIA di setiap halaman cetak */
+@media print {
+  body::before { display: none; }
+  .tanpa-cetak { display: none !important; }
+  body::after {
+    content: "RAHASIA";
+    position: fixed;
+    top: 6mm;
+    right: 10mm;
+    font-weight: 700;
+    color: #b91c1c;
+    letter-spacing: 0.1em;
   }
 }

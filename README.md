@@ -1,329 +1,97 @@
-# Codeguide Starter Fullstack
+# SIMPEL — Sistem Informasi Manajemen Pelanggaran
 
-A modern web application starter template built with Next.js 15, featuring authentication, database integration, and dark mode support.
+**Universitas Negeri Malang · Direktorat Sumber Daya Manusia dan Keuangan**
+Seksi Kinerja, Disiplin, dan Sistem Informasi SDM
 
-## Tech Stack
+SIMPEL mencatat seluruh dugaan pelanggaran disiplin pegawai — dari informasi mentah sampai arsip — dengan pembangkit surat yang formatnya bisa diatur sendiri, pemantauan tenggat otomatis, dan kerahasiaan yang terjaga.
 
-- **Framework:** [Next.js 15](https://nextjs.org/) (App Router with Turbopack)
-- **Language:** TypeScript
-- **Authentication:** [Better Auth](https://better-auth.com/)
-- **Database:** [Drizzle ORM](https://orm.drizzle.team/) with PostgreSQL
-- **Styling:** [Tailwind CSS v4](https://tailwindcss.com/)
-- **UI Components:** [shadcn/ui](https://ui.shadcn.com/) (New York style)
-- **Theme System:** [next-themes](https://github.com/pacocoursey/next-themes)
-- **Icons:** [Lucide React](https://lucide.dev/)
+---
 
-## Prerequisites
+## 1. Untuk pengguna (tanpa latar belakang teknis)
 
-Before you begin, ensure you have the following:
-- Node.js 18+ installed
-- Docker and Docker Compose (for database setup)
-- Generated project documents from [CodeGuide](https://codeguide.dev/) for best development experience
+### Masuk
+1. Buka alamat SIMPEL di peramban (laptop, tablet, atau ponsel).
+2. Pilih **Lanjutkan dengan Google** (pakai akun Google yang emailnya sudah didaftarkan admin) atau masuk dengan email + kata sandi.
+3. Saat pertama masuk, Anda diminta memasang **verifikasi dua langkah** (aplikasi autentikator di ponsel, mis. Google Authenticator). Ikuti petunjuk di layar.
+4. Bila muncul "Akses belum diberikan", minta admin mendaftarkan email Anda di **Pengaturan → Pengguna**.
 
-## Getting Started
+> Demi kerahasiaan, SIMPEL keluar otomatis setelah 30 menit tidak ada aktivitas.
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd codeguide-starter-fullstack
-   ```
+### Empat jenis catatan
+| Menu | Isi | Dihitung di tenggat & statistik? |
+|---|---|---|
+| **Registrasi Informasi** | Surat/laporan dugaan pelanggaran yang belum lengkap | Tidak |
+| **Kasus Hukdis** | Kasus hukuman disiplin dengan tahapan penuh | Ya |
+| **Pembinaan** | Teguran pembinaan, kode etik, konseling | Tidak |
+| **Arsip Lampau** | Kasus sebelum SIMPEL ada; berkas boleh tidak lengkap | Tidak |
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   # or
-   yarn install
-   # or
-   pnpm install
-   ```
+### Alur kasus singkat
+1. Catat informasi → lengkapi terlapor & bukti → **Naikkan jadi kasus**.
+2. SIMPEL memilih **peraturan yang berlaku pada tanggal peristiwa** secara otomatis, menghitung siapa yang berwenang, dan menyusun tahapan yang sesuai rezim (ASN / Pegawai Rektor) dan tingkat hukuman.
+3. Ikuti tahap demi tahap. Warna tenggat: 🟢 aman · 🟡 1–3 hari kerja lagi · 🔴 lewat · ⚪ selesai.
+4. Di tiap tahap ada tombol **Buat dokumen** — surat terisi otomatis dari data kasus, tinggal lengkapi isian yang kosong, unduh `.docx`, sunting sedikit di Word, cetak.
+5. Saat pemeriksaan, pakai **Mode sidang** (tab Pemeriksaan) untuk mencatat tanya jawab — tersimpan otomatis tiap 5 detik — lalu **Selesai & Susun BAP**.
 
-3. **Environment Variables Setup**
-   - Copy the `.env.example` file to `.env`:
-     ```bash
-     cp .env.example .env
-     ```
-   - The default values work with Docker setup, modify as needed
+### Tips
+- **Cari apa saja** dengan tombol cari di atas (atau `Ctrl + K`): nama, NIP, nomor registrasi, nomor surat, isi pindaian.
+- **Mode privasi** (ikon mata di atas) menyamarkan nama & NIP di layar — berguna saat rapat atau presentasi.
+- Tidak ada tombol hapus permanen; "arsipkan" menyembunyikan data dengan alasan dan tercatat di log audit.
+- Panduan lengkap ada di menu **Bantuan** di dalam aplikasi.
 
-4. **Start the development server**
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   # or
-   pnpm dev
-   ```
+### Cara menambah template surat baru
+1. Buka dokumen Word contoh, ganti bagian yang berubah-ubah dengan penanda dalam kurung kurawal, mis. `{nama_terperiksa}`, `{nip_terperiksa}`, `{tanggal_surat_panjang}`, `{pasal_dilanggar}`. Daftar penanda ada di **Pengaturan → Template dokumen → Katalog placeholder**.
+2. Untuk tabel berulang (anggota tim, tanya jawab), letakkan `{#anggota_tim}` di awal sel pertama baris dan `{/anggota_tim}` di akhir sel terakhir baris yang sama.
+3. **Pengaturan → Template dokumen → Tambah template** → unggah berkas `.docx`.
+4. SIMPEL memindai penanda dan mencocokkannya dengan katalog. Penanda yang tidak dikenal bisa dipetakan ke data lain atau dijadikan **isian manual**.
+5. Isi jenis dokumen, rezim, dan tahap tempat template ditawarkan.
+6. Tekan **Uji** untuk mengunduh contoh berisi data dummy. Bila sudah benar, aktifkan.
+7. Mengunggah ulang template yang sama membuat **versi baru**; versi lama tetap tersimpan sehingga dokumen lama bisa dicetak ulang persis.
 
-5. **Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.**
+### Bila peraturan berubah
+Buka **Pengaturan → Peraturan → Tambah peraturan baru**. Wizard enam langkah menyalin peraturan lama sebagai titik awal; Anda tinggal menyunting pasal, tingkat & jenis hukuman, ambang kehadiran, tenggat, dan kewenangan, lalu **menguji dengan kasus contoh** sebelum mengaktifkannya. **Tidak perlu programmer.** Kasus lama tidak tersentuh.
 
-## Configuration
+---
 
-### Option 1: Docker Setup (Recommended)
-1. **Start PostgreSQL with Docker:**
-   ```bash
-   npm run db:up
-   ```
-   This starts PostgreSQL in a Docker container with default credentials.
+## 2. Hal yang perlu dikonfirmasi pemilik produk
 
-2. **Push database schema:**
-   ```bash
-   npm run db:push
-   ```
+- Teks pasal **PP 94/2021** di katalog disalin tanpa naskah resmi di tangan — semua ditandai *Perlu verifikasi*. Cocokkan dengan JDIH lalu hapus tandanya.
+- Teks pasal **Pertor UM 70/2026** (Pasal 5 huruf a–r, Pasal 6 huruf a–s) **belum terisi** karena naskahnya belum diunggah. Salin dari naskah resmi melalui **Pengaturan → Peraturan → Pertor UM 70/2026 → Pasal**.
+- Rujukan pasal ambang kehadiran, sebagian matriks kewenangan, dan kalender hari libur 2026 ditandai *Perlu verifikasi*. Kalender 2027 baru berisi libur bertanggal tetap.
+- Daftar pertanyaan baku BAP dan isi 17 template disusun ulang karena berkas sumber (`templates-sumber/` dari PRD) belum tersedia. Ganti dengan berkas resmi UM melalui menu Template.
+- Template SK Hukuman Disiplin lama mengutip "Pasal 3 huruf f, Pasal 4 huruf c, Pasal 10 ayat (1) huruf e" sambil menyebut Peraturan Rektor 70/2026 — padahal penomoran itu milik PP 94/2021. Di SIMPEL bagian itu kini **selalu** diisi otomatis lewat `{pasal_dilanggar}` dan `{nama_regulasi}` dari katalog peraturan kasus, sehingga kesalahan semacam itu tidak bisa terjadi lagi.
+- Daftar konfirmasi lain (PRD §17): format penomoran surat, status PP Gaji & Tunjangan ASN, keberlakuan Kepmendiktisaintek 84/M/KEP/2025, daftar unit kerja penerima delegasi, kebijakan retensi arsip, penanda tangan tiap dokumen.
+- Sebaiknya ada penetapan tertulis Direktur SDMK tentang pengendali data, masa simpan arsip, dan prosedur pemusnahan.
 
-### Option 2: Local Database Setup
-1. Create a PostgreSQL database locally
-2. Update your environment variables in `.env`:
-   ```env
-   DATABASE_URL=postgresql://username:password@localhost:5432/database_name
-   POSTGRES_DB=your_database_name
-   POSTGRES_USER=your_username
-   POSTGRES_PASSWORD=your_password
-   ```
-3. Run database migrations:
-   ```bash
-   npm run db:push
-   ```
+---
 
-## Environment Variables
+## 3. Untuk pengembang
 
-Create a `.env` file in the root directory with the following variables:
+### Teknologi
+Next.js 15 (App Router) · TypeScript · Tailwind CSS 4 + shadcn/ui · PostgreSQL di Supabase (postgres.js) · Supabase Storage (bucket privat) · Clerk (Google + email, allowlist, 2FA) · docxtemplater · SheetJS & ExcelJS · Recharts · Vitest · Vercel.
 
-```env
-# Database Configuration (defaults work with Docker)
-DATABASE_URL=postgresql://postgres:postgres@localhost:5433/postgres
-POSTGRES_DB=postgres
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-
-# Authentication
-BETTER_AUTH_SECRET=your_secret_key_here
-BETTER_AUTH_URL=http://localhost:3000
-NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000
-```
-
-## Features
-
-- 🔐 Authentication with Better Auth (email/password)
-- 🗄️ PostgreSQL Database with Drizzle ORM
-- 🎨 40+ shadcn/ui components (New York style)
-- 🌙 Dark mode with system preference detection
-- 🚀 App Router with Server Components and Turbopack
-- 📱 Responsive design with TailwindCSS v4
-- 🎯 Type-safe database operations
-- 🔒 Modern authentication patterns
-- 🐳 Full Docker support with multi-stage builds
-- 🚀 Production-ready deployment configuration
-
-## Project Structure
-
-```
-codeguide-starter-fullstack/
-├── app/                        # Next.js app router pages
-│   ├── globals.css            # Global styles with dark mode
-│   ├── layout.tsx             # Root layout with providers
-│   └── page.tsx               # Main page
-├── components/                # React components
-│   └── ui/                    # shadcn/ui components (40+)
-├── db/                        # Database configuration
-│   ├── index.ts              # Database connection
-│   └── schema/               # Database schemas
-├── docker/                    # Docker configuration
-│   └── postgres/             # PostgreSQL initialization
-├── hooks/                     # Custom React hooks
-├── lib/                       # Utility functions
-│   ├── auth.ts               # Better Auth configuration
-│   └── utils.ts              # General utilities
-├── auth-schema.ts            # Authentication schema
-├── docker-compose.yml        # Docker services configuration
-├── Dockerfile                # Application container definition
-├── drizzle.config.ts         # Drizzle configuration
-└── components.json           # shadcn/ui configuration
-```
-
-## Database Integration
-
-This starter includes modern database integration:
-
-- **Drizzle ORM** for type-safe database operations
-- **PostgreSQL** as the database provider
-- **Better Auth** integration with Drizzle adapter
-- **Database migrations** with Drizzle Kit
-
-## Development Commands
-
-### Application
-- `npm run dev` - Start development server with Turbopack
-- `npm run build` - Build for production with Turbopack
-- `npm start` - Start production server
-- `npm run lint` - Run ESLint
-
-### Database
-- `npm run db:up` - Start PostgreSQL in Docker
-- `npm run db:down` - Stop PostgreSQL container
-- `npm run db:dev` - Start development PostgreSQL (port 5433)
-- `npm run db:dev-down` - Stop development PostgreSQL
-- `npm run db:push` - Push schema changes to database
-- `npm run db:generate` - Generate Drizzle migration files
-- `npm run db:studio` - Open Drizzle Studio (database GUI)
-- `npm run db:reset` - Reset database (drop all tables and recreate)
-
-### Styling with shadcn/ui
-- Pre-configured with 40+ shadcn/ui components in New York style
-- Components are fully customizable and use CSS variables for theming
-- Automatic dark mode support with next-themes integration
-- Add new components: `npx shadcn@latest add [component-name]`
-
-### Docker
-- `npm run docker:build` - Build application Docker image
-- `npm run docker:up` - Start full application stack (app + database)
-- `npm run docker:down` - Stop all containers
-- `npm run docker:logs` - View container logs
-- `npm run docker:clean` - Stop containers and clean up volumes
-
-## Docker Development
-
-### Quick Start with Docker
+### Menjalankan lokal
 ```bash
-# Start the entire stack (recommended for new users)
-npm run docker:up
-
-# View logs
-npm run docker:logs
-
-# Stop everything
-npm run docker:down
+npm install
+npm run dev          # http://localhost:3000
+npm test             # uji unit (hari kerja, regresi hukum, resolver, nol konstanta)
+npm run db:migrate   # menjalankan supabase/migrations/*.sql yang belum dijalankan
+npm run db:seed      # data awal (idempoten) ; `npm run db:seed -- template` untuk template
 ```
+Kredensial ada di `.env.local` (tidak masuk Git). Contoh nama variabel di `.env.example`.
 
-### Development Workflow
-```bash
-# Option 1: Database only (develop app locally)
-npm run db:up          # Start PostgreSQL
-npm run dev            # Start Next.js development server
+### Struktur & konvensi
+Lihat **`documentation/KONVENSI-KODE.md`**. Spesifikasi lengkap: `app_summary.md`.
 
-# Option 2: Full Docker stack
-npm run docker:up      # Start both app and database
-```
+### ⛔ PANTANGAN PERMANEN PROYEK
+1. **Aturan hukum tidak boleh ditanam di kode.** Angka ambang, tenggat, nama jenis hukuman, kode peraturan, dan matriks kewenangan adalah isi tabel. `tests/tanpa-konstanta-hukum.test.ts` menggagalkan build bila `lib/hukdis/` memuatnya.
+2. **Migrasi hanya boleh menambah**: `CREATE TABLE`, `ADD COLUMN ... NULL`, `CREATE INDEX`. Tidak pernah `DROP` atau mengubah tipe kolom yang sudah terisi. `scripts/migrasi.mjs` menolak migrasi yang melanggar.
+3. **Riwayat tidak boleh berubah.** Kasus, pelanggaran, hukuman, dan dokumen menyimpan salinan beku; trigger basis data menolak perubahan katalog yang sudah dipakai.
+4. **Tidak ada penghapusan permanen dari antarmuka biasa.**
+5. **Kunci rahasia hanya di server** (Vercel env / `.env.local`). Tidak pernah di repo, tidak pernah di peramban.
 
-### Docker Services
+Yang memang memerlukan programmer — dan itu wajar: entitas baru yang belum ada konsepnya, alur yang berbeda secara mendasar, atau integrasi sistem luar baru. Dalam kasus itu pun data lama tetap utuh karena migrasi hanya menambah.
 
-The `docker-compose.yml` includes:
-
-- **postgres**: Main PostgreSQL database (port 5432)
-- **postgres-dev**: Development database (port 5433) - use `--profile dev`
-- **app**: Next.js application container (port 3000)
-
-### Docker Profiles
-
-```bash
-# Start development database on port 5433
-docker-compose --profile dev up postgres-dev -d
-
-# Or use the npm script
-npm run db:dev
-```
-
-## Deployment
-
-### Production Deployment
-
-#### Option 1: Docker Compose (VPS/Server)
-
-1. **Clone and setup on your server:**
-   ```bash
-   git clone <your-repo>
-   cd codeguide-starter-fullstack
-   cp .env.example .env
-   ```
-
-2. **Configure environment variables:**
-   ```bash
-   # Edit .env with production values
-   DATABASE_URL=postgresql://postgres:your_secure_password@postgres:5432/postgres
-   POSTGRES_DB=postgres
-   POSTGRES_USER=postgres
-   POSTGRES_PASSWORD=your_secure_password
-   BETTER_AUTH_SECRET=your-very-secure-secret-key
-   BETTER_AUTH_URL=https://yourdomain.com
-   NEXT_PUBLIC_BETTER_AUTH_URL=https://yourdomain.com
-   ```
-
-3. **Deploy:**
-   ```bash
-   npm run docker:up
-   ```
-
-#### Option 2: Container Registry (AWS/GCP/Azure)
-
-1. **Build and push image:**
-   ```bash
-   # Build the image
-   docker build -t your-registry/codeguide-starter-fullstack:latest .
-   
-   # Push to registry
-   docker push your-registry/codeguide-starter-fullstack:latest
-   ```
-
-2. **Deploy using your cloud provider's container service**
-
-#### Option 3: Vercel + External Database
-
-1. **Deploy to Vercel:**
-   ```bash
-   npm i -g vercel
-   vercel
-   ```
-
-2. **Add environment variables in Vercel dashboard:**
-   - `DATABASE_URL`: Your managed PostgreSQL connection string
-   - `BETTER_AUTH_SECRET`: Generate a secure secret
-   - `BETTER_AUTH_URL`: Your Vercel deployment URL
-
-3. **Setup database:**
-   ```bash
-   # Push schema to your managed database
-   npm run db:push
-   ```
-
-### Environment Variables for Production
-
-```env
-# Required for production
-DATABASE_URL=postgresql://user:password@host:port/database
-BETTER_AUTH_SECRET=generate-a-very-secure-32-character-key
-BETTER_AUTH_URL=https://yourdomain.com
-
-# Optional optimizations
-NODE_ENV=production
-```
-
-### Production Considerations
-
-- **Database**: Use managed PostgreSQL (AWS RDS, Google Cloud SQL, etc.)
-- **Security**: Generate strong secrets, use HTTPS
-- **Performance**: Enable Next.js output: 'standalone' for smaller containers
-- **Monitoring**: Add logging and health checks
-- **Backup**: Regular database backups
-- **SSL**: Terminate SSL at load balancer or reverse proxy
-
-### Health Checks
-
-The application includes basic health checks. You can extend them:
-
-```dockerfile
-# In Dockerfile, add health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/api/health || exit 1
-```
-
-## AI Coding Agent Integration
-
-This starter is optimized for AI coding agents:
-
-- **Clear file structure** and naming conventions
-- **TypeScript integration** with proper type definitions
-- **Modern authentication** patterns
-- **Database schema** examples
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-# codeguide-starter-fullstack
+### Infrastruktur
+- **Supabase**: proyek "Trial Project" (ref `mtkmyferajlmrjbfvjbi`), peran basis data khusus `simpel_app`. RLS aktif di semua tabel tanpa kebijakan anon — data hanya diakses lewat server. Cadangan harian bawaan Supabase.
+- **Clerk**: aplikasi "SIMPEL UM" (instance development). Untuk produksi resmi dengan domain UM (mis. `simpel.um.ac.id`), buat instance production di dashboard Clerk dan pasang kredensial Google OAuth milik UM.
+- **Vercel**: proyek `simpel-um`, terhubung ke repo GitHub ini; setiap push ke `main` men-deploy otomatis. Cron harian menghapus rekaman audio yang lewat masa retensi.

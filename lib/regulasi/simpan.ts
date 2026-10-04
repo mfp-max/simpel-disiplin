@@ -1,4 +1,5 @@
 import type { Sql } from "@/lib/db";
+import { GalatPengguna } from "@/lib/galat";
 import { FORMAT_DEFINISI, kunciPasal, type DefinisiRegulasi } from "./definisi";
 
 type Hasil = { regulasiId: string; peringatan: string[] };
@@ -9,12 +10,12 @@ type Hasil = { regulasiId: string; peringatan: string[] };
  * Dipakai oleh seed, wizard "Tambah Peraturan Baru", dan impor JSON.
  */
 export async function simpanDefinisi(tx: Sql, def: DefinisiRegulasi, userId: string | null = null): Promise<Hasil> {
-  if (def.format !== FORMAT_DEFINISI) throw new Error(`Format berkas tidak dikenal (${String(def.format)}).`);
+  if (def.format !== FORMAT_DEFINISI) throw new GalatPengguna(`Format berkas tidak dikenal (${String(def.format)}).`);
   const r = def.regulasi;
   const peringatan: string[] = [];
 
   const ada = await tx`select id from regulasi where kode = ${r.kode}`;
-  if (ada.length) throw new Error(`Peraturan berkode ${r.kode} sudah ada. Gunakan kode lain atau buat versi baru.`);
+  if (ada.length) throw new GalatPengguna(`Peraturan berkode ${r.kode} sudah ada. Gunakan kode lain atau buat versi baru.`);
 
   let menggantikanId: string | null = null;
   if (r.menggantikan_kode) {
@@ -44,7 +45,7 @@ export async function simpanDefinisi(tx: Sql, def: DefinisiRegulasi, userId: str
   const tId = (kode?: string | null) => {
     if (!kode) return null;
     const id = tingkatId.get(kode);
-    if (!id) throw new Error(`Tingkat "${kode}" tidak didefinisikan pada ${r.kode}.`);
+    if (!id) throw new GalatPengguna(`Tingkat "${kode}" tidak didefinisikan pada ${r.kode}.`);
     return id;
   };
 
@@ -61,13 +62,13 @@ export async function simpanDefinisi(tx: Sql, def: DefinisiRegulasi, userId: str
   for (const j of def.jenis_hukuman ?? []) {
     if (!j.pengganti_sementara) continue;
     const p = jenisId.get(j.pengganti_sementara);
-    if (!p) throw new Error(`Pengganti sementara "${j.pengganti_sementara}" tidak ditemukan.`);
+    if (!p) throw new GalatPengguna(`Pengganti sementara "${j.pengganti_sementara}" tidak ditemukan.`);
     await tx`update jenis_hukuman set pengganti_sementara_id = ${p} where id = ${jenisId.get(j.kode)!}`;
   }
   const jId = (kode?: string | null) => {
     if (!kode) return null;
     const id = jenisId.get(kode);
-    if (!id) throw new Error(`Jenis hukuman "${kode}" tidak didefinisikan pada ${r.kode}.`);
+    if (!id) throw new GalatPengguna(`Jenis hukuman "${kode}" tidak didefinisikan pada ${r.kode}.`);
     return id;
   };
 
@@ -167,7 +168,7 @@ export async function simpanTerkait(tx: Sql, def: DefinisiRegulasi): Promise<str
 /** Mengekspor definisi peraturan dari basis data (kebalikan simpanDefinisi). */
 export async function eksporDefinisi(db: Sql, regulasiId: string): Promise<DefinisiRegulasi> {
   const [r] = await db`select r.*, m.kode as menggantikan_kode from regulasi r left join regulasi m on m.id = r.menggantikan_id where r.id = ${regulasiId}`;
-  if (!r) throw new Error("Peraturan tidak ditemukan");
+  if (!r) throw new GalatPengguna("Peraturan tidak ditemukan");
   const tingkat = await db`select * from tingkat_hukuman where regulasi_id = ${regulasiId} order by urutan`;
   const tk = new Map(tingkat.map((t) => [t.id, t.kode as string]));
   const jenis = await db`select * from jenis_hukuman where regulasi_id = ${regulasiId} order by urutan`;
@@ -184,7 +185,7 @@ export async function eksporDefinisi(db: Sql, regulasiId: string): Promise<Defin
     db`select * from fixture_regresi where regulasi_id = ${regulasiId} order by created_at`,
     db`select t.peran, t.keterangan, r2.kode from regulasi_terkait t join regulasi r2 on r2.id = t.terkait_id where t.regulasi_id = ${regulasiId} order by t.urutan`,
   ]);
-  const aktifSaja = <T extends { aktif?: boolean }>(xs: T[]) => xs.filter((x) => x.aktif !== false);
+  const aktifSaja = (xs: readonly Record<string, unknown>[]) => xs.filter((x) => x.aktif !== false);
 
   return {
     format: FORMAT_DEFINISI,
@@ -195,44 +196,44 @@ export async function eksporDefinisi(db: Sql, regulasiId: string): Promise<Defin
       katalog_pasal_lengkap: r.katalog_pasal_lengkap, catatan: r.catatan, peringatan: r.peringatan, perlu_verifikasi: r.perlu_verifikasi,
     },
     terkait: terkait.map((t) => ({ kode: t.kode, peran: t.peran, keterangan: t.keterangan })),
-    tingkat: aktifSaja(tingkat as never[]).map((t: Record<string, unknown>) => ({ kode: t.kode as string, nama: t.nama as string, urutan: t.urutan as number, keterangan: t.keterangan as string | null })),
-    jenis_hukuman: aktifSaja(jenis as never[]).map((j: Record<string, unknown>) => ({
+    tingkat: aktifSaja(tingkat).map((t: Record<string, unknown>) => ({ kode: t.kode as string, nama: t.nama as string, urutan: t.urutan as number, keterangan: t.keterangan as string | null })),
+    jenis_hukuman: aktifSaja(jenis).map((j: Record<string, unknown>) => ({
       kode: j.kode as string, tingkat: tk.get(j.tingkat_hukuman_id as string)!, nama: j.nama as string, urutan: j.urutan as number,
       durasi_bulan: j.durasi_bulan as number | null, pengganti_sementara: j.pengganti_sementara_id ? jk.get(j.pengganti_sementara_id as string) ?? null : null,
       peringatan: j.peringatan as string | null, catatan: j.catatan as string | null, pasal_rujukan: j.pasal_rujukan as string | null,
       blokir_kgb: j.blokir_kgb as boolean, blokir_kenaikan_pangkat: j.blokir_kenaikan_pangkat as boolean, perlu_verifikasi: j.perlu_verifikasi as boolean,
     })),
-    pasal: aktifSaja(pasal as never[]).map((p: Record<string, unknown>) => ({
+    pasal: aktifSaja(pasal).map((p: Record<string, unknown>) => ({
       jenis: p.jenis as string, pasal: p.pasal as string, ayat: p.ayat as string | null, huruf: p.huruf as string | null, angka: p.angka as string | null,
       teks: p.teks as string, tingkat: p.tingkat_hukuman_terkait_id ? tk.get(p.tingkat_hukuman_terkait_id as string) ?? null : null,
       perlu_verifikasi: p.perlu_verifikasi as boolean, catatan: p.catatan as string | null,
     })),
-    ambang: aktifSaja(ambang as never[]).map((a: Record<string, unknown>) => ({
+    ambang: aktifSaja(ambang).map((a: Record<string, unknown>) => ({
       hari_min: a.hari_min as number, hari_max: a.hari_max as number | null, berturut_turut: a.berturut_turut as boolean,
       tingkat: a.tingkat_hukuman_id ? tk.get(a.tingkat_hukuman_id as string) ?? null : null,
       jenis: a.jenis_hukuman_id ? jk.get(a.jenis_hukuman_id as string) ?? null : null,
       pasal_rujukan: a.pasal_rujukan as string | null, akibat_tambahan: a.akibat_tambahan as string | null, alur_khusus: a.alur_khusus as string | null,
       perlu_verifikasi: a.perlu_verifikasi as boolean, catatan: a.catatan as string | null,
     })),
-    tenggat: aktifSaja(tenggat as never[]).map((t: Record<string, unknown>) => ({
+    tenggat: aktifSaja(tenggat).map((t: Record<string, unknown>) => ({
       kode: t.kode as string, nama_tenggat: t.nama_tenggat as string, kode_tahap: t.kode_tahap as string, dihitung_dari: t.dihitung_dari as string,
       acuan_tanggal: t.acuan_tanggal as "realisasi" | "rencana", arah: t.arah as "sebelum" | "sesudah", jumlah: t.jumlah as number,
       satuan: t.satuan as "hari_kerja", hitung_hari_dasar: t.hitung_hari_dasar as boolean, sifat: t.sifat as "wajib_hukum",
       pasal_rujukan: t.pasal_rujukan as string | null, catatan: t.catatan as string | null, perlu_verifikasi: t.perlu_verifikasi as boolean,
     })),
-    kewenangan: aktifSaja(kewenangan as never[]).map((k: Record<string, unknown>) => ({
+    kewenangan: aktifSaja(kewenangan).map((k: Record<string, unknown>) => ({
       tingkat: k.tingkat_hukuman_id ? tk.get(k.tingkat_hukuman_id as string) ?? null : null, jenis: k.jenis as "penjatuh",
       peran_kode: k.peran_kode as string, nama_peran: k.nama_peran as string, lingkup: k.lingkup as string | null,
       syarat_tambahan: k.syarat_tambahan as Record<string, unknown>, hasil: k.hasil as Record<string, unknown>, prioritas: k.prioritas as number,
       pasal_rujukan: k.pasal_rujukan as string | null, catatan: k.catatan as string | null, perlu_verifikasi: k.perlu_verifikasi as boolean,
     })),
-    tahapan: aktifSaja(tahapan as never[]).map((t: Record<string, unknown>) => ({
+    tahapan: aktifSaja(tahapan).map((t: Record<string, unknown>) => ({
       tingkat: t.tingkat_hukuman_id ? tk.get(t.tingkat_hukuman_id as string) ?? null : null, kode_tahap: t.kode_tahap as string,
       nama: t.nama as string, urutan: t.urutan as number, opsional: t.opsional as boolean, kondisi: t.kondisi as Record<string, unknown>,
       status_kasus: t.status_kasus as string | null, pasal_rujukan: t.pasal_rujukan as string | null, bantuan: t.bantuan as string | null,
       jenis_dokumen: t.jenis_dokumen as string[], perlu_verifikasi: t.perlu_verifikasi as boolean,
     })),
-    pemetaan: aktifSaja(pemetaan as never[]).map((p: Record<string, unknown>) => ({
+    pemetaan: aktifSaja(pemetaan).map((p: Record<string, unknown>) => ({
       pasal: p.pasal_regulasi_id ? pk.get(p.pasal_regulasi_id as string) ?? null : null, dampak: p.dampak as string,
       tingkat: tk.get(p.tingkat_hukuman_id as string)!, pasal_rujukan_pemetaan: p.pasal_rujukan_pemetaan as string | null,
       catatan: p.catatan as string | null, perlu_verifikasi: p.perlu_verifikasi as boolean,

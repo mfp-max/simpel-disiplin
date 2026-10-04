@@ -35,6 +35,8 @@ async function referensi() {
   }
   const [{ n }] = await sql`select count(*)::int as n from pertanyaan_baku`;
   if (n === 0) for (const q of R.PERTANYAAN_BAKU) await sql`insert into pertanyaan_baku ${sql(q)}`;
+  const [{ b }] = await sql`select count(*)::int as b from bank_pertanyaan`;
+  if (b === 0) for (const q of R.BANK_PERTANYAAN) await sql`insert into bank_pertanyaan ${sql(q)}`;
 
   let i = 0;
   for (const p of KATALOG_PLACEHOLDER) {
