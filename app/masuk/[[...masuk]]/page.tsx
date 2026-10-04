@@ -15,7 +15,7 @@ export default function HalamanMasuk() {
           <p className="text-sm text-muted-foreground">Direktorat Sumber Daya Manusia dan Keuangan · Universitas Negeri Malang</p>
         </div>
       </div>
-      <SignIn path="/masuk" routing="path" fallbackRedirectUrl="/beranda" signUpUrl="/masuk" />
+      <SignIn path="/masuk" routing="path" fallbackRedirectUrl="/beranda" signUpUrl="/daftar" />
       <p className="flex max-w-sm items-start gap-2 text-center text-sm text-muted-foreground">
         <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden />
         Hanya pengguna yang telah didaftarkan admin yang dapat masuk. Seluruh akses tercatat dalam log audit.

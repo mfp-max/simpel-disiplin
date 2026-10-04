@@ -29,9 +29,14 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <ClerkProvider
-      localization={idID}
+      localization={{
+        ...idID,
+        formFieldInputPlaceholder__emailAddress: "Masukkan alamat email",
+        formFieldInputPlaceholder__emailAddress_username: "Masukkan alamat email",
+        formFieldInputPlaceholder__password: "Masukkan kata sandi",
+      }}
       signInUrl="/masuk"
-      signUpUrl="/masuk"
+      signUpUrl="/daftar"
       appearance={{
         variables: {
           // Mengikuti token tema SIMPEL sehingga otomatis terang/gelap
