@@ -15,8 +15,9 @@ function buat() {
     ssl: "require",
     prepare: false,
     max: 5,
-    idle_timeout: 20,
-    connect_timeout: 15,
+    idle_timeout: 10,
+    max_lifetime: 60 * 5,
+    connect_timeout: 10,
     onnotice: () => {},
     transform: { undefined: null },
     types: {
@@ -31,13 +32,57 @@ function ambil(): postgres.Sql {
   return globalThis.__simpelSql;
 }
 
+// Batas waktu sisi klien. postgres.js tidak punya batas waktu kueri, dan bila
+// pooler menutup soket saat koneksi awal ia mencoba ulang tanpa henti; di Vercel
+// (Fluid compute) soket juga bisa "mati diam-diam" setelah instans dibekukan.
+// Akibatnya halaman berputar sampai 504 (5 menit). Dengan batas ini kueri yang
+// macet gagal cepat dengan galat yang jelas, dan pool dibuang agar permintaan
+// berikutnya membuka koneksi baru.
+const BATAS_KUERI_MS = 30_000;
+const BATAS_TRANSAKSI_MS = 240_000;
+
+function buangPool(s: postgres.Sql) {
+  if (globalThis.__simpelSql === s) globalThis.__simpelSql = undefined;
+  s.end({ timeout: 0 }).catch(() => {});
+}
+
+function denganBatas<T>(p: PromiseLike<T>, ms: number, s: postgres.Sql, apa: string): Promise<T> {
+  let t: ReturnType<typeof setTimeout> | undefined;
+  const habis = new Promise<never>((_, tolak) => {
+    t = setTimeout(() => {
+      console.error(`[SIMPEL] ${apa} tidak dijawab basis data dalam ${ms / 1000} dtk — pool koneksi dibuang`);
+      buangPool(s);
+      tolak(new Error(`Basis data tidak merespons (${apa} > ${ms / 1000} dtk)`));
+    }, ms);
+  });
+  return Promise.race([p, habis]).finally(() => clearTimeout(t));
+}
+
+// Kueri postgres.js baru dijalankan saat `.then` dipanggil (di-await), jadi
+// cukup `.then` milik objek kuerinya yang dibungkus. `.values()`, `.raw()`, dsb.
+// mengembalikan objek yang sama sehingga tetap ikut terbatasi.
+function batasiKueri(q: unknown, s: postgres.Sql): unknown {
+  if (!q || typeof q !== "object" || typeof (q as { cancel?: unknown }).cancel !== "function") return q;
+  const kueri = q as PromiseLike<unknown> & { then: PromiseLike<unknown>["then"] };
+  const asli = kueri.then.bind(kueri);
+  kueri.then = (ok, gagal) => denganBatas({ then: asli }, BATAS_KUERI_MS, s, "kueri").then(ok, gagal);
+  return kueri;
+}
+
 // Koneksi dibuat saat pertama kali dipakai (bukan saat modul diimpor),
 // sehingga build dan uji unit tidak memerlukan basis data.
 export const sql: postgres.Sql = new Proxy(function () {} as unknown as postgres.Sql, {
-  apply: (_t, _this, args) => (ambil() as unknown as (...a: unknown[]) => unknown)(...args),
+  apply: (_t, _this, args) => {
+    const s = ambil();
+    return batasiKueri((s as unknown as (...a: unknown[]) => unknown)(...args), s);
+  },
   get: (_t, prop) => {
-    const s = ambil() as unknown as Record<string | symbol, unknown>;
-    const v = s[prop];
+    const s = ambil();
+    if (prop === "begin") {
+      return (...a: unknown[]) =>
+        denganBatas((s.begin as (...x: unknown[]) => Promise<unknown>)(...a), BATAS_TRANSAKSI_MS, s, "transaksi");
+    }
+    const v = (s as unknown as Record<string | symbol, unknown>)[prop];
     return typeof v === "function" ? (v as (...a: unknown[]) => unknown).bind(s) : v;
   },
 });
