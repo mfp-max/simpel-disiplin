@@ -17,7 +17,9 @@
     "uji:dokumen": "tsx --conditions=react-server --env-file=.env.local scripts/uji-dokumen.ts",
     "uji:sidang": "tsx --conditions=react-server --env-file=.env.local scripts/uji-sidang.ts",
     "uji:laporan": "tsx --conditions=react-server --env-file=.env.local scripts/uji-laporan.ts",
-    "impor:dummy": "tsx --conditions=react-server --env-file=.env.local scripts/impor-dummy.ts"
+    "impor:dummy": "tsx --conditions=react-server --env-file=.env.local scripts/impor-dummy.ts",
+    "db:backup": "node --env-file=.env.local scripts/backup-penuh.mjs",
+    "db:pulihkan-backup": "node --env-file=.env.local scripts/pulihkan-backup.mjs"
   },
   "dependencies": {
     "@clerk/localizations": "^4.21.2",
