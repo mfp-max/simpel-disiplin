@@ -1,7 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "regions": ["sin1"],
+  "framework": "nextjs",
+  "regions": [
+    "sin1"
+  ],
   "crons": [
-    { "path": "/api/cron/hapus-rekaman", "schedule": "0 19 * * *" }
+    {
+      "path": "/api/cron/hapus-rekaman",
+      "schedule": "0 19 * * *"
+    }
   ]
 }
