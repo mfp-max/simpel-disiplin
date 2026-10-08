@@ -3,6 +3,10 @@ import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Pii } from "./dasar";
 
+// Tautan per baris sengaja tanpa prefetch: daftar berisi puluhan baris, dan prefetch
+// otomatis memanggil server untuk tiap baris sekaligus — menghabiskan kuota koneksi
+// basis data (pooler Supabase mode sesi) dalam sekejap.
+
 export type KolomEntri<T> = {
   judul: string;
   isi: (r: T) => React.ReactNode;
@@ -27,7 +31,7 @@ export function TabelEntri<T extends { id: string }>({
       <ul className="divide-y rounded-xl border bg-card md:hidden">
         {rows.map((r) => (
           <li key={r.id}>
-            <Link href={href(r)} className="flex items-start gap-3 px-4 py-3 active:bg-accent">
+            <Link href={href(r)} prefetch={false} className="flex items-start gap-3 px-4 py-3 active:bg-accent">
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="font-medium leading-snug">{judulKartu(r)}</div>
                 {subKartu && <div className="text-sm text-muted-foreground">{subKartu(r)}</div>}
@@ -54,11 +58,11 @@ export function TabelEntri<T extends { id: string }>({
               <tr key={r.id} className="group hover:bg-accent/50">
                 {kolom.map((k, i) => (
                   <td key={k.judul} className={cn("px-4 py-3 align-top", k.kelas)}>
-                    {i === 0 ? <Link href={href(r)} className="font-medium hover:underline">{k.isi(r)}</Link> : k.isi(r)}
+                    {i === 0 ? <Link href={href(r)} prefetch={false} className="font-medium hover:underline">{k.isi(r)}</Link> : k.isi(r)}
                   </td>
                 ))}
                 <td className="px-2 py-3 align-top">
-                  <Link href={href(r)} aria-label="Buka" className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground group-hover:text-foreground">
+                  <Link href={href(r)} prefetch={false} aria-label="Buka" className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground group-hover:text-foreground">
                     <ChevronRight className="size-5" />
                   </Link>
                 </td>

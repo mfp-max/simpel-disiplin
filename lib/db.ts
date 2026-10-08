@@ -1,4 +1,5 @@
 import net from "node:net";
+import { after } from "next/server";
 import postgres from "postgres";
 
 // Koneksi Postgres (Supabase, lewat connection pooler Supavisor MODE SESI, port 5432).
@@ -58,7 +59,7 @@ function buat() {
     // Mode sesi memegang satu koneksi server per koneksi klien; kuota pooler paket
     // gratis kecil, jadi tiap instans server cukup 3 koneksi (sisanya antre).
     max: 3,
-    idle_timeout: 10,
+    idle_timeout: DETIK_MENGANGGUR,
     max_lifetime: 60 * 5,
     connect_timeout: 10,
     onnotice: () => {},
@@ -75,6 +76,31 @@ function buat() {
 function ambil(): postgres.Sql {
   if (!globalThis.__simpelSql) globalThis.__simpelSql = buat();
   return globalThis.__simpelSql;
+}
+
+// Koneksi yang menganggur ditutup setelah DETIK_MENGANGGUR agar jatah pooler mode sesi
+// (pool_size) cepat kembali. Di Vercel, instans yang diam DIBEKUKAN — timer berhenti dan
+// koneksinya tertahan, sehingga beberapa instans beku saja sudah menghabiskan jatah
+// (galat EMAXCONNSESSION). Karena itu setiap kali kueri selesai, instans ditahan hidup
+// lewat after() sampai koneksi menganggur sempat ditutup — meniru attachDatabasePool
+// dari @vercel/functions, yang tidak mendukung postgres.js.
+const DETIK_MENGANGGUR = 5;
+let penahan: { t: ReturnType<typeof setTimeout>; lepas: () => void } | null = null;
+
+function tahanSampaiKoneksiDitutup() {
+  if (!process.env.VERCEL) return;
+  if (penahan) {
+    clearTimeout(penahan.t);
+    penahan.lepas();
+  }
+  const tunggu = new Promise<void>((lepas) => {
+    penahan = { t: setTimeout(lepas, DETIK_MENGANGGUR * 1000 + 500), lepas };
+  });
+  try {
+    after(tunggu);
+  } catch {
+    // di luar konteks permintaan (skrip) — tidak perlu ditahan
+  }
 }
 
 // Batas waktu sisi klien. postgres.js tidak punya batas waktu kueri, dan bila
@@ -110,7 +136,8 @@ function batasiKueri(q: unknown, s: postgres.Sql): unknown {
   if (!q || typeof q !== "object" || typeof (q as { cancel?: unknown }).cancel !== "function") return q;
   const kueri = q as PromiseLike<unknown> & { then: PromiseLike<unknown>["then"] };
   const asli = kueri.then.bind(kueri);
-  kueri.then = (ok, gagal) => denganBatas({ then: asli }, BATAS_KUERI_MS, s, "kueri").then(ok, gagal);
+  kueri.then = (ok, gagal) =>
+    denganBatas({ then: asli }, BATAS_KUERI_MS, s, "kueri").finally(tahanSampaiKoneksiDitutup).then(ok, gagal);
   return kueri;
 }
 
@@ -125,7 +152,9 @@ export const sql: postgres.Sql = new Proxy(function () {} as unknown as postgres
     const s = ambil();
     if (prop === "begin") {
       return (...a: unknown[]) =>
-        denganBatas((s.begin as (...x: unknown[]) => Promise<unknown>)(...a), BATAS_TRANSAKSI_MS, s, "transaksi");
+        denganBatas((s.begin as (...x: unknown[]) => Promise<unknown>)(...a), BATAS_TRANSAKSI_MS, s, "transaksi").finally(
+          tahanSampaiKoneksiDitutup,
+        );
     }
     const v = (s as unknown as Record<string | symbol, unknown>)[prop];
     return typeof v === "function" ? (v as (...a: unknown[]) => unknown).bind(s) : v;
