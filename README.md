@@ -103,6 +103,6 @@ Lihat **`documentation/KONVENSI-KODE.md`**. Spesifikasi lengkap: `app_summary.md
 Yang memang memerlukan programmer — dan itu wajar: entitas baru yang belum ada konsepnya, alur yang berbeda secara mendasar, atau integrasi sistem luar baru. Dalam kasus itu pun data lama tetap utuh karena migrasi hanya menambah.
 
 ### Infrastruktur
-- **Supabase**: proyek "Trial Project" (ref `mtkmyferajlmrjbfvjbi`), peran basis data khusus `simpel_app`. RLS aktif di semua tabel tanpa kebijakan anon — data hanya diakses lewat server. Cadangan harian bawaan Supabase.
+- **Supabase**: organisasi "UM - Direktorat SDM", proyek `simpel-um` (ref `noydkqtagdrsrzeflkyw`, Singapura `ap-southeast-1`), peran basis data khusus `simpel_app` (lihat `supabase/setup/00_peran_simpel_app.sql`). RLS aktif di semua tabel tanpa kebijakan anon — data hanya diakses lewat server. Cadangan harian bawaan Supabase.
 - **Clerk**: aplikasi "SIMPEL UM" (instance development). Untuk produksi resmi dengan domain UM (mis. `simpel.um.ac.id`), buat instance production di dashboard Clerk dan pasang kredensial Google OAuth milik UM.
-- **Vercel**: proyek `simpel-um`, terhubung ke repo GitHub ini; setiap push ke `main` men-deploy otomatis. Cron harian menghapus rekaman audio yang lewat masa retensi.
+- **Vercel**: proyek `simpel-um` (fungsi di Singapura `sin1`, satu wilayah dengan database), terhubung ke repo GitHub ini; setiap push ke `main` men-deploy otomatis. Cron harian menghapus rekaman audio yang lewat masa retensi.
