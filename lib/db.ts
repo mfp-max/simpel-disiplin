@@ -1,7 +1,7 @@
 import net from "node:net";
 import postgres from "postgres";
 
-// Koneksi Postgres (Supabase, lewat connection pooler mode transaksi).
+// Koneksi Postgres (Supabase, lewat connection pooler Supavisor MODE SESI, port 5432).
 // Hanya dipakai di server. Peran database `simpel_app` adalah pemilik tabel;
 // RLS tetap aktif di semua tabel sehingga kunci publik tidak bisa membaca apa pun.
 
@@ -27,9 +27,22 @@ function ringkasJejak(j: Jejak | undefined) {
   return JSON.stringify({ percobaan: j.percobaan, umurPoolMs: kini - j.mulai, soketTerakhir: soket });
 }
 
-function buat() {
+// JANGAN pakai mode transaksi (port 6543). Dengan `prepare: false`, postgres.js mengirim
+// kueri berparameter dalam dua tahap (Parse/Describe/Flush, lalu Bind/Execute/Sync).
+// Pooler mode transaksi kadang menahan jawaban tahap pertama sampai ada Sync, sehingga
+// klien dan server saling menunggu (sesi server: active/ClientRead) — halaman macet.
+// Terbukti 2026-10-08: Beranda selalu macet di 6543, selalu lancar di 5432.
+// Port 6543 pada host pooler Supabase karena itu dialihkan otomatis ke 5432.
+function alamatBasisData() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL belum diatur");
+  const u = new URL(url);
+  if (u.hostname.endsWith(".pooler.supabase.com") && u.port === "6543") u.port = "5432";
+  return u.toString();
+}
+
+function buat() {
+  const url = alamatBasisData();
   const jejak: Jejak = { mulai: Date.now(), percobaan: 0, soket: [] };
   const sql = postgres(url, {
     // Soket dibuat sendiri (perilaku sama dengan bawaan) agar bisa dijejak.
@@ -42,7 +55,9 @@ function buat() {
     },
     ssl: "require",
     prepare: false,
-    max: 5,
+    // Mode sesi memegang satu koneksi server per koneksi klien; kuota pooler paket
+    // gratis kecil, jadi tiap instans server cukup 3 koneksi (sisanya antre).
+    max: 3,
     idle_timeout: 10,
     max_lifetime: 60 * 5,
     connect_timeout: 10,
@@ -63,8 +78,8 @@ function ambil(): postgres.Sql {
 }
 
 // Batas waktu sisi klien. postgres.js tidak punya batas waktu kueri, dan bila
-// pooler menutup soket saat koneksi awal ia mencoba ulang tanpa henti; di Vercel
-// (Fluid compute) soket juga bisa "mati diam-diam" setelah instans dibekukan.
+// pooler menutup soket saat koneksi awal ia mencoba ulang tanpa henti; soket juga
+// bisa "mati diam-diam", atau kueri macet seperti kasus mode transaksi di atas.
 // Akibatnya halaman berputar sampai 504 (5 menit). Dengan batas ini kueri yang
 // macet gagal cepat dengan galat yang jelas, dan pool dibuang agar permintaan
 // berikutnya membuka koneksi baru.

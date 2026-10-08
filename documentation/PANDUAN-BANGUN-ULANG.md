@@ -81,7 +81,7 @@ Kerjakan berurutan. Centang bila selesai.
 3. Catatan: instans *Development* Clerk cukup untuk SIMPEL (≤100 pengguna). Instans *Production* baru diperlukan bila SIMPEL memakai domain sendiri (mis. `simpel.um.ac.id`).
 
 ### 3c. Database (oleh Claude)
-Claude menyusun `DATABASE_URL` (port 6543) dan `DATABASE_URL_MIGRASI` (port 5432) di `.env.local` dari project ref + host pooler + kata sandi `simpel_app` yang sudah disiapkan, mengganti `regions` di `vercel.json` menjadi `sin1`, lalu menjalankan:
+Claude menyusun `DATABASE_URL` dan `DATABASE_URL_MIGRASI` (keduanya pooler **mode sesi, port 5432** — mode transaksi 6543 membuat kueri macet, lihat `lib/db.ts`) di `.env.local` dari project ref + host pooler + kata sandi `simpel_app` yang sudah disiapkan, mengganti `regions` di `vercel.json` menjadi `sin1`, lalu menjalankan:
 ```bash
 npm run db:migrate
 ```
