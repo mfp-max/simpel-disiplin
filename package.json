@@ -11,6 +11,7 @@
     "test": "vitest run",
     "db:migrate": "node --env-file=.env.local scripts/migrasi.mjs",
     "db:seed": "tsx --conditions=react-server --env-file=.env.local scripts/seed.ts",
+    "db:pulihkan": "node --env-file=.env.local scripts/pulihkan.mjs",
     "template:buat": "tsx scripts/buat-template.ts",
     "uji:kasus": "tsx --conditions=react-server --env-file=.env.local scripts/uji-kasus.ts",
     "uji:dokumen": "tsx --conditions=react-server --env-file=.env.local scripts/uji-dokumen.ts",

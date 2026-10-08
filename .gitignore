@@ -43,3 +43,6 @@ next-env.d.ts
 
 # keluaran uji template
 /templates-sumber/_uji/
+
+# cadangan lokal (berisi data pribadi) — jangan di-commit
+/_cadangan/
