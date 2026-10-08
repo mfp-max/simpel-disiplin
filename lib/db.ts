@@ -1,3 +1,4 @@
+import net from "node:net";
 import postgres from "postgres";
 
 // Koneksi Postgres (Supabase, lewat connection pooler mode transaksi).
@@ -8,10 +9,37 @@ declare global {
   var __simpelSql: postgres.Sql | undefined;
 }
 
+// Jejak soket per pool untuk diagnosis: bila kueri macet, log mencatat berapa kali
+// koneksi dicoba dan keadaan soket terakhir (tersambung? byte masuk/keluar?).
+type Jejak = { mulai: number; percobaan: number; soket: { s: net.Socket; t: number }[] };
+const jejakPool = new WeakMap<postgres.Sql, Jejak>();
+
+function ringkasJejak(j: Jejak | undefined) {
+  if (!j) return "tanpa jejak";
+  const kini = Date.now();
+  const soket = j.soket.map(({ s, t }) => ({
+    umurMs: kini - t,
+    ip: s.remoteAddress ?? null,
+    status: s.destroyed ? "ditutup" : s.connecting ? "menyambung" : s.readyState,
+    masuk: s.bytesRead,
+    keluar: s.bytesWritten,
+  }));
+  return JSON.stringify({ percobaan: j.percobaan, umurPoolMs: kini - j.mulai, soketTerakhir: soket });
+}
+
 function buat() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL belum diatur");
-  return postgres(url, {
+  const jejak: Jejak = { mulai: Date.now(), percobaan: 0, soket: [] };
+  const sql = postgres(url, {
+    // Soket dibuat sendiri (perilaku sama dengan bawaan) agar bisa dijejak.
+    socket: ({ host, port }: { host: string[]; port: number[] }) => {
+      jejak.percobaan++;
+      const s = net.connect(port[0], host[0]);
+      jejak.soket.push({ s, t: Date.now() });
+      if (jejak.soket.length > 3) jejak.soket.shift();
+      return s;
+    },
     ssl: "require",
     prepare: false,
     max: 5,
@@ -24,7 +52,9 @@ function buat() {
       // Kolom `date` dibiarkan sebagai teks "YYYY-MM-DD" agar tidak bergeser zona waktu.
       date: { to: 1082, from: [1082], serialize: (x: string) => x, parse: (x: string) => x },
     },
-  });
+  } as postgres.Options<Record<string, postgres.PostgresType>>);
+  jejakPool.set(sql, jejak);
+  return sql;
 }
 
 function ambil(): postgres.Sql {
@@ -50,7 +80,7 @@ function denganBatas<T>(p: PromiseLike<T>, ms: number, s: postgres.Sql, apa: str
   let t: ReturnType<typeof setTimeout> | undefined;
   const habis = new Promise<never>((_, tolak) => {
     t = setTimeout(() => {
-      console.error(`[SIMPEL] ${apa} tidak dijawab basis data dalam ${ms / 1000} dtk — pool koneksi dibuang`);
+      console.error(`[SIMPEL] ${apa} tidak dijawab basis data dalam ${ms / 1000} dtk — pool koneksi dibuang. Jejak: ${ringkasJejak(jejakPool.get(s))}`);
       buangPool(s);
       tolak(new Error(`Basis data tidak merespons (${apa} > ${ms / 1000} dtk)`));
     }, ms);
