@@ -156,7 +156,8 @@ export async function konteksDokumen(
   const pasalBeku = pelanggaran.filter((p) => p.snapshot_pasal).map((p) => p.snapshot_pasal as { pasal: string; ayat?: string; huruf?: string; angka?: string });
   v.nomor_registrasi = teks(e.nomor_registrasi);
   v.judul_kasus = teks(e.judul);
-  v.uraian_dugaan = pertama(e.ringkasan, unik(pelanggaran.map((p) => teks(p.uraian_perbuatan))).join("; "), e.judul);
+  // Tanpa titik akhir: template menyambungnya dengan tanda baca sendiri ("... disiplin {uraian_dugaan}.").
+  v.uraian_dugaan = pertama(e.ringkasan, unik(pelanggaran.map((p) => teks(p.uraian_perbuatan))).join("; "), e.judul).replace(/[\s.]+$/, "");
   // Hanya dari salinan pasal kasus ini (peraturan yang sama) — lihat lib/dokumen/pasal.ts
   v.pasal_dilanggar = pasalBeku.length
     ? rangkaiPasal(pasalBeku)
@@ -256,7 +257,8 @@ export async function konteksDokumen(
   // --- Pejabat ---
   const penjatuh = kew.penjatuh ?? null;
   const penjatuhRektor = penjatuh?.peran_kode === "rektor";
-  v.jabatan_pejabat_penjatuh = pertama(spj?.jabatan, penjatuh?.nama_peran, huk?.pejabat_penjatuh);
+  // Pejabat yang dicatat pada keputusan lebih spesifik daripada nama peran generik dari aturan kewenangan.
+  v.jabatan_pejabat_penjatuh = pertama(spj?.jabatan, huk?.pejabat_penjatuh, penjatuh?.nama_peran);
   v.nama_pejabat_penjatuh = pertama(spj?.nama, penjatuhRektor ? set.nama_rektor : "");
   v.nip_pejabat_penjatuh = pertama(spj?.nip, penjatuhRektor ? set.nip_rektor : "");
   const atasan = (atasanRows[0] ?? null) as Baris | null;
@@ -270,7 +272,7 @@ export async function konteksDokumen(
   v.tanggal_diterima = tanggalPanjang((huk?.tanggal_diterima_pegawai as string) ?? null, "");
   v.tanggal_mulai_berlaku = tanggalPanjang((huk?.tanggal_mulai_berlaku as string) ?? null, "");
   v.tanggal_selesai_hukuman = tanggalPanjang((huk?.tanggal_selesai as string) ?? null, "");
-  v.durasi_hukuman = durasiBulan((sjh?.durasi_bulan as number | null) ?? null);
+  v.durasi_hukuman = durasiBulan(((pengganti?.durasi_bulan ?? sjh?.durasi_bulan) as number | null) ?? null);
   const daftarKaidah = (k: unknown) => (Array.isArray(k) ? k.map(teks).filter(Boolean) : []);
   v.menimbang = daftarKaidah(kaidah.konsideran_menimbang).map((t, i) => ({ huruf: HURUF[i] ?? String(i + 1), teks: t }));
   v.mengingat = daftarKaidah(kaidah.konsideran_mengingat).map((t, i) => ({ nomor: String(i + 1), teks: t }));

@@ -263,11 +263,13 @@ export async function catatHukuman(
   let mulai: string | null = null;
   const aturanBerlaku = aturan.tenggat.find((t) => t.kode_tahap === "berlaku");
   if (m.tanggalDiterima && aturanBerlaku) mulai = hitungTanggalTenggat(aturanBerlaku, m.tanggalDiterima, kal);
-  const selesai = hitungTanggalSelesai(mulai, jenis);
+  // Masa transisi: yang dijalani adalah hukuman pengganti, jadi masanya mengikuti hukuman pengganti.
+  const jenisDijalani = ef.diganti && ef.jenis ? ef.jenis : jenis;
+  const selesai = hitungTanggalSelesai(mulai, jenisDijalani);
   const ik = kenaPemotonganIk(aturan, tingkat?.kode);
   const snapshot = {
     kode: jenis?.kode, nama: jenis?.nama, tingkat: tingkat?.nama, tingkat_kode: tingkat?.kode, durasi_bulan: jenis?.durasi_bulan ?? null,
-    pengganti_sementara: ef.diganti ? { kode: ef.jenis?.kode, nama: ef.jenis?.nama } : null, pasal_rujukan: jenis?.pasal_rujukan ?? null,
+    pengganti_sementara: ef.diganti ? { kode: ef.jenis?.kode, nama: ef.jenis?.nama, durasi_bulan: ef.jenis?.durasi_bulan ?? null } : null, pasal_rujukan: jenis?.pasal_rujukan ?? null,
     regulasi: aturan.regulasi.nama_singkat, dicatat_pada: new Date().toISOString(),
   };
 
@@ -291,7 +293,7 @@ export async function catatHukuman(
   if (m.tanggalSk) await tx`update tahapan_kasus set tanggal_realisasi = coalesce(tanggal_realisasi, ${m.tanggalSk}) where entri_id = ${entriId} and kode_tahap = 'penetapan_sk'`;
   if (mulai) await tx`update tahapan_kasus set tanggal_rencana = ${mulai} where entri_id = ${entriId} and kode_tahap = 'berlaku'`;
   if (selesai) await tx`update tahapan_kasus set tanggal_rencana = ${selesai} where entri_id = ${entriId} and kode_tahap = 'menjalani'`;
-  if (!jenis?.durasi_bulan) await tx`update tahapan_kasus set status = 'dilewati' where entri_id = ${entriId} and kode_tahap = 'menjalani' and status = 'belum'`;
+  if (!jenisDijalani?.durasi_bulan) await tx`update tahapan_kasus set status = 'dilewati' where entri_id = ${entriId} and kode_tahap = 'menjalani' and status = 'belum'`;
   await segarkanTenggat(tx, entriId);
   return { mulai, selesai, pemotonganIk: ik, diganti: ef.diganti };
 }

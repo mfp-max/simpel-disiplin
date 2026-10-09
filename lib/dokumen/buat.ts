@@ -17,7 +17,8 @@ export const MIME_DOCX = "application/vnd.openxmlformats-officedocument.wordproc
 export type IsianKosong = { kode: string; label: string; jenis: "teks" | "loop"; field?: string[] };
 
 /** Placeholder yang wajar kosong (tidak ditanyakan). Murni urusan tata letak surat, bukan aturan hukum. */
-export const BOLEH_KOSONG = new Set(["pemotongan_ik_teks", "catatan_perekaman", "nomor_panggilan_2", "tanggal_panggilan_2", "lampiran_surat"]);
+// durasi_hukuman: bagian bersyarat {#durasi_hukuman} di SK — hukuman tanpa masa (mis. teguran) memang tanpa durasi.
+export const BOLEH_KOSONG = new Set(["pemotongan_ik_teks", "catatan_perekaman", "nomor_panggilan_2", "tanggal_panggilan_2", "lampiran_surat", "durasi_hukuman"]);
 /** Diisi lewat kolom khusus "Nomor surat" & "Tanggal surat" di dialog. */
 export const DIISI_DIALOG = new Set(["nomor_surat", "tanggal_surat", "tanggal_surat_panjang", "tahun_surat"]);
 
