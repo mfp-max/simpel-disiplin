@@ -54,7 +54,7 @@ function buat() {
       if (jejak.soket.length > 3) jejak.soket.shift();
       return s;
     },
-    ssl: "require",
+    ssl: new URL(url).searchParams.get("sslmode") === "disable" ? false : "require",
     prepare: false,
     // Mode sesi memegang satu koneksi server per koneksi klien; kuota pooler paket
     // gratis kecil, jadi tiap instans server cukup 3 koneksi (sisanya antre).

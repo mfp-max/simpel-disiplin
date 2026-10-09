@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   BookOpenCheck, Building2, CalendarDays, ChevronRight, FileSpreadsheet, FileText, HelpCircle, ListChecks, Lock, MessagesSquare,
-  ScrollText, Settings2, ShieldCheck, Tags, UserCog, Users, Medal, type LucideIcon,
+  ScrollText, Settings2, ShieldCheck, Tags, UserCog, Users, Medal, FlaskConical, type LucideIcon,
 } from "lucide-react";
 import { JudulHalaman, Catatan } from "@/components/simpel/dasar";
 import { Lencana } from "@/components/simpel/lencana";
@@ -40,6 +40,12 @@ const KELOMPOK: { judul: string; kartu: Kartu[] }[] = [
       { href: "/pengaturan/golongan", judul: "Golongan ruang", keterangan: "Urutan golongan/pangkat untuk membandingkan jenjang pemeriksa.", ikon: Medal, akses: "admin" },
       { href: "/pengaturan/referensi", judul: "Kode referensi", keterangan: "Pilihan isian: sumber informasi, jenis dokumen, unsur tim, dll.", ikon: Tags, akses: "admin" },
       { href: "/pengaturan/umum", judul: "Pengaturan umum", keterangan: "Identitas instansi, Nama & NIP Rektor, batas waktu sesi, retensi.", ikon: Settings2, akses: "admin" },
+    ],
+  },
+  {
+    judul: "Pelatihan",
+    kartu: [
+      { href: "/pengaturan/simulasi", judul: "Data simulasi", keterangan: "Buat kasus contoh lengkap (dokumen & berkas) untuk latihan, lalu arsipkan sebelum dipakai sungguhan.", ikon: FlaskConical, akses: "admin" },
     ],
   },
 ];

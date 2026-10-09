@@ -46,3 +46,8 @@ next-env.d.ts
 
 # cadangan lokal (berisi data pribadi) — jangan di-commit
 /_cadangan/
+
+# keluaran simulasi alur (berisi data pegawai)
+/simulasi-keluaran/
+
+.env*

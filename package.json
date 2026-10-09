@@ -18,6 +18,7 @@
     "uji:sidang": "tsx --conditions=react-server --env-file=.env.local scripts/uji-sidang.ts",
     "uji:laporan": "tsx --conditions=react-server --env-file=.env.local scripts/uji-laporan.ts",
     "impor:dummy": "tsx --conditions=react-server --env-file=.env.local scripts/impor-dummy.ts",
+    "simulasi": "tsx --conditions=react-server --env-file=.env.local scripts/simulasi.ts",
     "db:backup": "node --env-file=.env.local scripts/backup-penuh.mjs",
     "db:pulihkan-backup": "node --env-file=.env.local scripts/pulihkan-backup.mjs"
   },
