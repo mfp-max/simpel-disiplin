@@ -5,7 +5,8 @@ import { wajibHak } from "@/lib/auth";
 import { transaksi } from "@/lib/db";
 import { catatAudit, selisih } from "@/lib/audit";
 import { GalatPengguna, jalankan } from "@/lib/galat";
-import { ambilPegawai, nomorRegistrasi, rezimDariStatus, snapshotPegawai } from "@/lib/entri";
+import { ambilPegawai, nomorRegistrasi, rezimDariStatus, salinanArsip, snapshotPegawaiLengkap } from "@/lib/entri";
+import { pecahGolongan } from "@/lib/simpega/normalisasi";
 import { ambilRegulasi, snapshotRegulasi } from "@/lib/regulasi";
 
 export type MasukanEntriSederhana = {
@@ -32,6 +33,10 @@ export type MasukanEntriSederhana = {
   pasalTeksBebas?: string | null;
   nomorSk?: string | null;
   tanggalSk?: string | null;
+  // khusus arsip: keadaan pegawai SAAT KEJADIAN (master pegawai berisi keadaan sekarang)
+  jabatanSaatItu?: string | null;
+  golonganSaatItu?: string | null;
+  unitSaatItu?: string | null;
 };
 
 const STATUS_AWAL = { informasi: "informasi", non_hukdis: "tercatat", arsip: "selesai" } as const;
@@ -51,6 +56,15 @@ export async function buatEntriSederhana(m: MasukanEntriSederhana) {
     const tahun = m.tahunPeristiwa ?? (m.tanggalPeristiwa ? Number(m.tanggalPeristiwa.slice(0, 4)) : null);
     const regulasi = m.regulasiId ? await ambilRegulasi(m.regulasiId) : null;
     const rezim = regulasi?.rezim_kode ?? pegawai?.rezim_kode ?? (pegawai ? await rezimDariStatus(pegawai.status_pegawai) : null);
+    const salinanMaster = pegawai ? await snapshotPegawaiLengkap(pegawai) : null;
+    let salinan: Record<string, unknown> | null = salinanMaster;
+    if (m.kelas === "arsip") {
+      const g = m.golonganSaatItu?.trim() ? pecahGolongan(m.golonganSaatItu) : null;
+      salinan = salinanArsip(salinanMaster, {
+        jabatan: m.jabatanSaatItu, unit_kerja: m.unitSaatItu,
+        ...(g ? { golongan_ruang: g.golongan_ruang ?? m.golonganSaatItu, pangkat: g.pangkat, golongan_pangkat: g.golongan_pangkat } : {}),
+      }, pegawai ? undefined : { nama: m.namaPegawaiBebas?.trim(), nip: m.nipBebas?.trim() });
+    }
 
     const id = await transaksi(async (tx) => {
       const nomor = await nomorRegistrasi(tx, m.kelas, new Date().getFullYear());
@@ -60,7 +74,7 @@ export async function buatEntriSederhana(m: MasukanEntriSederhana) {
           catatan_internal, berasal_dari_id, tanggal_selesai, pic_user_id, created_by, updated_by)
         values (${nomor}, ${m.kelas}, ${m.judul.trim()}, ${m.ringkasan ?? null}, ${m.tanggalPeristiwa || null}, ${tahun}, ${pegawai?.id ?? null},
           ${pegawai ? null : m.namaPegawaiBebas?.trim() || null}, ${pegawai ? null : m.nipBebas?.trim() || null}, ${pegawai?.unit_kerja_id ?? null},
-          ${m.unitKerjaBebas ?? null}, ${pegawai ? tx.json(snapshotPegawai(pegawai) as never) : null}, ${regulasi?.id ?? null}, ${rezim},
+          ${m.unitKerjaBebas ?? m.unitSaatItu ?? null}, ${salinan ? tx.json(salinan as never) : null}, ${regulasi?.id ?? null}, ${rezim},
           ${regulasi ? tx.json(snapshotRegulasi(regulasi) as never) : null}, ${STATUS_AWAL[m.kelas]}, ${m.sumberInformasi ?? null},
           ${m.pelaporNama ?? null}, ${m.pelaporKontak ?? null}, false, ${m.kelengkapanBerkas ?? null}, ${m.jenisNonHukdis ?? null},
           ${m.catatanInternal ?? null}, ${m.berasalDariId ?? null}, ${m.kelas === "arsip" ? m.tanggalSk || m.tanggalPeristiwa || null : null},
@@ -124,13 +138,14 @@ export async function gantiPegawaiEntri(id: string, pegawaiId: string | null) {
   return jalankan(async () => {
     const p = await wajibHak("boleh_ubah");
     const pegawai = pegawaiId ? await ambilPegawai(pegawaiId) : null;
+    const salinan = pegawai ? await snapshotPegawaiLengkap(pegawai) : null;
     await transaksi(async (tx) => {
       const [e] = await tx`select kelas, pegawai_id from entri where id = ${id}`;
       if (!e) throw new GalatPengguna("Data tidak ditemukan.");
       if (e.kelas === "hukdis") throw new GalatPengguna("Terperiksa pada kasus hukdis tidak dapat diganti. Hentikan kasus ini dan buat kasus baru.");
       const rezim = pegawai ? pegawai.rezim_kode ?? (await rezimDariStatus(pegawai.status_pegawai, tx)) : null;
       await tx`update entri set pegawai_id = ${pegawai?.id ?? null}, unit_kerja_id = ${pegawai?.unit_kerja_id ?? null},
-          snapshot_pegawai = ${pegawai ? tx.json(snapshotPegawai(pegawai) as never) : null}, rezim_kode = coalesce(${rezim}, rezim_kode),
+          snapshot_pegawai = ${salinan ? tx.json(salinan as never) : null}, rezim_kode = coalesce(${rezim}, rezim_kode),
           nama_pegawai_bebas = case when ${pegawai?.id ?? null}::uuid is null then nama_pegawai_bebas else null end, updated_by = ${p.id}
         where id = ${id}`;
       await catatAudit(p, { aksi: "ubah", tabel: "entri", record_id: id, entri_id: id, ringkasan: { pegawai_id: { sebelum: e.pegawai_id, sesudah: pegawai?.id ?? null } } }, tx);

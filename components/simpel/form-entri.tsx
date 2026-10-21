@@ -103,6 +103,24 @@ export function FormEntriBaru({
             <Bidang label="Uraian singkat (satu baris)" htmlFor="judul" wajib keterangan="Contoh: Tidak masuk kerja 30 hari tanpa keterangan.">
               <Input id="judul" value={m.judul} onChange={(e) => set("judul", e.target.value)} />
             </Bidang>
+            <fieldset className="space-y-3 rounded-lg border border-dashed p-3 sm:p-4">
+              <legend className="px-1 text-[15px] font-medium">Keadaan pegawai saat kejadian (bila diketahui)</legend>
+              <p className="text-sm text-muted-foreground">
+                Master pegawai berisi jabatan &amp; pangkat <strong>sekarang</strong>. Isi bagian ini dari SK lama agar riwayat mencatat keadaan saat itu.
+                Bila dikosongkan, riwayat ditandai “data saat dicatat”.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Bidang label="Jabatan saat itu" htmlFor="jab-lalu">
+                  <Input id="jab-lalu" placeholder={pegawai && !pakaiNamaBebas ? "mis. Asisten Ahli" : "mis. Pengadministrasi Umum"} value={m.jabatanSaatItu ?? ""} onChange={(e) => set("jabatanSaatItu", e.target.value)} />
+                </Bidang>
+                <Bidang label="Pangkat / golongan saat itu" htmlFor="gol-lalu">
+                  <Input id="gol-lalu" placeholder="mis. Penata Muda, III/a" value={m.golonganSaatItu ?? ""} onChange={(e) => set("golonganSaatItu", e.target.value)} />
+                </Bidang>
+                <Bidang label="Unit kerja saat itu" htmlFor="unit-lalu">
+                  <Input id="unit-lalu" placeholder="mis. Fakultas Sastra" value={m.unitSaatItu ?? ""} onChange={(e) => set("unitSaatItu", e.target.value)} />
+                </Bidang>
+              </div>
+            </fieldset>
           </>
         ) : (
           <>

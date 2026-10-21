@@ -23,7 +23,7 @@ export default async function DaftarPembinaan({ searchParams }: { searchParams: 
     ${pola ? sql`and (e.judul ilike ${pola} or e.nomor_registrasi ilike ${pola} or pg.nama_lengkap_gelar ilike ${pola} or pg.nip ilike ${pola} or e.nama_pegawai_bebas ilike ${pola})` : sql``}`;
   const [rows, [{ total }], jenis] = await Promise.all([
     sql`select e.id, e.nomor_registrasi, e.judul, e.tanggal_peristiwa, e.created_at, e.jenis_non_hukdis,
-          coalesce(pg.nama_lengkap_gelar, e.nama_pegawai_bebas) as nama, coalesce(pg.nip, e.nip_bebas) as nip, pg.unit_kerja
+          coalesce(e.snapshot_pegawai->>'nama_lengkap_gelar', pg.nama_lengkap_gelar, e.nama_pegawai_bebas) as nama, coalesce(e.snapshot_pegawai->>'nip', pg.nip, e.nip_bebas) as nip, coalesce(e.snapshot_pegawai->>'unit_kerja', pg.unit_kerja) as unit_kerja
         from entri e left join pegawai pg on pg.id = e.pegawai_id where ${where}
         order by coalesce(e.tanggal_peristiwa, e.created_at::date) desc limit ${PER} offset ${(hal - 1) * PER}`,
     sql`select count(*)::int as total from entri e left join pegawai pg on pg.id = e.pegawai_id where ${where}`,

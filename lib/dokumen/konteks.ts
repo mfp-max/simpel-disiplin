@@ -119,11 +119,17 @@ export async function konteksDokumen(
 
   const [anggota, qa, kehadiran, atasanRows] = await Promise.all([
     tim
-      ? db`select a.*, p.nama_lengkap_gelar, p.nip, p.pangkat, p.golongan_ruang as pg_golongan, p.golongan_pangkat,
-            p.jabatan_tambahan, p.jabatan_fungsional, p.jenis_pegawai, p.unit_kerja, g.pangkat as pangkat_gol
+      // Anggota: salinan beku saat ditetapkan (a.snapshot_pegawai); master pegawai hanya cadangan untuk data lama.
+      ? db`select a.*, coalesce(a.snapshot_pegawai->>'nama_lengkap_gelar', p.nama_lengkap_gelar) as nama_lengkap_gelar,
+            coalesce(a.snapshot_pegawai->>'nip', p.nip) as nip, coalesce(a.snapshot_pegawai->>'pangkat', p.pangkat) as pangkat,
+            coalesce(a.snapshot_pegawai->>'golongan_ruang', p.golongan_ruang) as pg_golongan,
+            coalesce(a.snapshot_pegawai->>'golongan_pangkat', p.golongan_pangkat) as golongan_pangkat,
+            case when a.snapshot_pegawai is null then p.jabatan_tambahan else a.snapshot_pegawai->>'jabatan' end as jabatan_tambahan,
+            case when a.snapshot_pegawai is null then p.jabatan_fungsional end as jabatan_fungsional, p.jenis_pegawai,
+            coalesce(a.snapshot_pegawai->>'unit_kerja', p.unit_kerja) as unit_kerja, g.pangkat as pangkat_gol
           from anggota_tim a
           left join pegawai p on p.id = a.pegawai_id
-          left join golongan_ruang g on upper(g.kode) = upper(coalesce(p.golongan_ruang, a.golongan_ruang))
+          left join golongan_ruang g on upper(g.kode) = upper(coalesce(a.snapshot_pegawai->>'golongan_ruang', p.golongan_ruang, a.golongan_ruang))
           where a.tim_id = ${tim.id as string} order by a.urutan, a.created_at`
       : Promise.resolve([] as unknown as Baris[]),
     sesi ? db`select urutan, pertanyaan, jawaban from qa_pemeriksaan where sesi_id = ${sesi.id as string} order by urutan` : Promise.resolve([] as unknown as Baris[]),
@@ -262,9 +268,10 @@ export async function konteksDokumen(
   v.nama_pejabat_penjatuh = pertama(spj?.nama, penjatuhRektor ? set.nama_rektor : "");
   v.nip_pejabat_penjatuh = pertama(spj?.nip, penjatuhRektor ? set.nip_rektor : "");
   const atasan = (atasanRows[0] ?? null) as Baris | null;
-  v.nama_atasan_langsung = teks(atasan?.nama_lengkap_gelar);
-  v.nip_atasan_langsung = teks(atasan?.nip);
-  v.jabatan_atasan_langsung = pertama(atasan?.jabatan_tambahan, atasan?.jabatan_fungsional, atasan?.jenis_pegawai);
+  // Atasan saat kasus dicatat (salinan beku); master pegawai hanya cadangan untuk entri lama.
+  v.nama_atasan_langsung = pertama(sp.atasan_nama, atasan?.nama_lengkap_gelar);
+  v.nip_atasan_langsung = pertama(sp.atasan_nip, sp.atasan_nama ? "" : atasan?.nip);
+  v.jabatan_atasan_langsung = pertama(sp.atasan_jabatan, sp.atasan_nama ? "" : pertama(atasan?.jabatan_tambahan, atasan?.jabatan_fungsional, atasan?.jenis_pegawai));
 
   // --- SK ---
   v.nomor_sk = teks(huk?.nomor_sk);

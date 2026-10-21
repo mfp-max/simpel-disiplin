@@ -40,7 +40,7 @@ export default async function HalamanSidang({ params }: { params: Promise<{ id: 
     daftarQa(sql, sesiId),
     muatSesiKlien(sql, sesiId),
     retensiHari(),
-    sql`select a.jabatan_dalam_tim, a.unsur, coalesce(pg.nama_lengkap_gelar, a.nama_bebas) as nama, coalesce(pg.nip, a.nip_bebas) as nip
+    sql`select a.jabatan_dalam_tim, a.unsur, coalesce(a.snapshot_pegawai->>'nama_lengkap_gelar', pg.nama_lengkap_gelar, a.nama_bebas) as nama, coalesce(a.snapshot_pegawai->>'nip', pg.nip, a.nip_bebas) as nip
         from anggota_tim a join tim_pemeriksa t on t.id = a.tim_id left join pegawai pg on pg.id = a.pegawai_id
         where t.id = (select id from tim_pemeriksa where entri_id = ${id} order by created_at desc limit 1)
         order by a.urutan, a.created_at`,

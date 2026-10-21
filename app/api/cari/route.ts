@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   const ts = q.split(/\s+/).filter(Boolean).map((w) => w.replace(/[^\p{L}\p{N}]/gu, "")).filter(Boolean).map((w) => `${w}:*`).join(" & ");
 
   const [entri, pegawai, dokumen, berkas] = await Promise.all([
-    sql`select e.id, e.kelas, e.nomor_registrasi, e.judul, coalesce(pg.nama_lengkap_gelar, e.nama_pegawai_bebas) as nama
+    sql`select e.id, e.kelas, e.nomor_registrasi, e.judul, coalesce(e.snapshot_pegawai->>'nama_lengkap_gelar', pg.nama_lengkap_gelar, e.nama_pegawai_bebas) as nama
       from entri e left join pegawai pg on pg.id = e.pegawai_id
       where e.diarsipkan_pada is null and (e.nomor_registrasi ilike ${pola} or e.judul ilike ${pola} or pg.nama_lengkap_gelar ilike ${pola}
         or pg.nip ilike ${pola} or e.nama_pegawai_bebas ilike ${pola} or e.nip_bebas ilike ${pola}

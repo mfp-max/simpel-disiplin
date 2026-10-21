@@ -5,7 +5,7 @@ import { sql, type Sql } from "@/lib/db";
 import { catatAudit } from "@/lib/audit";
 import { GalatPengguna } from "@/lib/galat";
 import { buatKasus, catatHukuman, segarkanTenggat, selaraskanStatus, selesaikanTahap, tambahPelanggaran } from "@/lib/kasus";
-import { ambilPegawai, nomorRegistrasi, peringkatGolongan, snapshotPegawai } from "@/lib/entri";
+import { ambilPegawai, nomorRegistrasi, peringkatGolongan, salinanArsip, snapshotAnggota, snapshotPegawaiLengkap, type KeadaanLampau } from "@/lib/entri";
 import { ambilRegulasi, muatAturan, muatKalender, snapshotRegulasi } from "@/lib/regulasi";
 import { hitungTanggalTenggat, validasiTim } from "@/lib/hukdis/mesin";
 import { konteksDokumen } from "@/lib/dokumen/konteks";
@@ -169,8 +169,9 @@ async function tim(tx: Sql, entriId: string, m: { nomorSk: string; tanggalSk: st
     const gol = (pg.golongan_ruang ?? "").toUpperCase();
     const v = validasiTim(aturan, [{ nama: pg.nama_lengkap_gelar, unsur, jabatan_dalam_tim: jab, peringkat: peringkat.get(gol) ?? null }], peringkat.get(golT) ?? null);
     if (v.galat.length) throw new Error(`Anggota tim ditolak aturan: ${v.galat.join(" ")}`);
-    const [a] = await tx`insert into anggota_tim (tim_id, pegawai_id, golongan_ruang, unsur, jabatan_dalam_tim, pernyataan_bebas_konflik, eselon_setara, urutan, created_by, updated_by)
-      values (${t.id}, ${pg.id}, ${gol || null}, ${unsur}, ${jab}, true, ${peringkat.get(gol) ?? null}, ${i + 1}, ${C.P.id}, ${C.P.id}) returning id`;
+    const lengkap = await ambilPegawai(pg.id, tx);
+    const [a] = await tx`insert into anggota_tim (tim_id, pegawai_id, golongan_ruang, unsur, jabatan_dalam_tim, pernyataan_bebas_konflik, eselon_setara, urutan, snapshot_pegawai, created_by, updated_by)
+      values (${t.id}, ${pg.id}, ${gol || null}, ${unsur}, ${jab}, true, ${peringkat.get(gol) ?? null}, ${i + 1}, ${lengkap ? tx.json(snapshotAnggota(lengkap) as never) : null}, ${C.P.id}, ${C.P.id}) returning id`;
     await catatAudit(C.P, { aksi: "buat", tabel: "anggota_tim", record_id: a.id, entri_id: entriId, ringkasan: { nama: pg.nama_lengkap_gelar, unsur, jabatan_dalam_tim: jab, simulasi: true } }, tx);
   }
   log(`     👥 Tim Pemeriksa (SK ${m.nomorSk}): ${m.anggota.map(([p, , j]) => `${j} ${p.nama_lengkap_gelar}`).join("; ")}`);
@@ -345,8 +346,11 @@ async function entriSederhana(tx: Sql, kode: string, m: {
   kelas: "informasi" | "non_hukdis" | "arsip"; judul: string; ringkasan: string; tanggal: string; peristiwa?: string | null; tahun?: number | null;
   pegawai?: Pg | null; namaBebas?: string | null; unitBebas?: string | null; sumber?: string | null; pelapor?: string | null; kontak?: string | null;
   catatan?: string | null; jenisNonHukdis?: string | null; regulasiKode?: string | null; berasalDari?: { id: string } | null; status?: string;
+  keadaan?: KeadaanLampau;
 }) {
   const pegawai = m.pegawai ? await ambilPegawai(m.pegawai.id, tx) : null;
+  const salinanMaster = pegawai ? await snapshotPegawaiLengkap(pegawai, tx) : null;
+  const salinan = m.kelas === "arsip" ? salinanArsip(salinanMaster, m.keadaan ?? {}) : salinanMaster;
   const [rg] = m.regulasiKode ? await tx`select id from regulasi where kode = ${m.regulasiKode}` : [null];
   const regulasi = rg ? await ambilRegulasi(rg.id, tx) : null;
   const nomor = await nomorRegistrasi(tx, m.kelas, new Date().getFullYear());
@@ -357,7 +361,7 @@ async function entriSederhana(tx: Sql, kode: string, m: {
       created_at, created_by, updated_by)
     values (${nomor}, ${m.kelas}, ${m.judul}, ${m.ringkasan}, ${m.peristiwa ?? null}, ${m.tahun ?? (m.peristiwa ? Number(m.peristiwa.slice(0, 4)) : null)},
       ${pegawai?.id ?? null}, ${pegawai ? null : m.namaBebas ?? null}, ${pegawai?.unit_kerja_id ?? null}, ${m.unitBebas ?? null},
-      ${pegawai ? tx.json(snapshotPegawai(pegawai) as never) : null}, ${regulasi?.id ?? null}, ${regulasi?.rezim_kode ?? pegawai?.rezim_kode ?? null},
+      ${salinan ? tx.json(salinan as never) : null}, ${regulasi?.id ?? null}, ${regulasi?.rezim_kode ?? pegawai?.rezim_kode ?? null},
       ${regulasi ? tx.json(snapshotRegulasi(regulasi) as never) : null}, ${status}, ${m.sumber ?? null}, ${m.pelapor ?? null}, ${m.kontak ?? null}, false,
       ${m.jenisNonHukdis ?? null}, ${m.catatan ?? null}, ${m.berasalDari?.id ?? null}, ${m.kelas === "arsip" ? m.peristiwa ?? null : null},
       ${tx.json({ simulasi: kode } as never)}, ${C.P.id}, ${`${m.tanggal} 08:15:00+07`}, ${C.P.id}, ${C.P.id})
@@ -955,8 +959,8 @@ export const SKENARIO: Skenario[] = [
       const [s5] = await tx`select pegawai_id from entri where data_tambahan->>'simulasi' = 'S5' and kelas = 'hukdis' and diarsipkan_pada is null limit 1`;
       const p5 = s5 ? ((await tx`select id, nip, nama_lengkap_gelar, golongan_ruang, unit_kerja, jabatan_fungsional as jabatan from pegawai where id = ${s5.pegawai_id}`)[0] as unknown as Pg) : await pegawai(tx, { gol: ["III/b", "III/c"], dosen: true });
       const lain = await pegawai(tx, { gol: ["II/d", "III/a", "III/b"], dosen: false });
-      const arsip = async (pg: Pg, m: { tahun: number; tanggal: string; judul: string; jenis: string; nomorSk: string; tanggalSk: string; pasal: string }) => {
-        const e = await entriSederhana(tx, "S16", { kelas: "arsip", judul: m.judul, ringkasan: m.judul, tanggal: "2026-09-21", peristiwa: m.tanggalSk, tahun: m.tahun, pegawai: pg, regulasiKode: "PP_53_2010", catatan: "Dicatat dari arsip fisik (pindaian SK)." });
+      const arsip = async (pg: Pg, m: { tahun: number; tanggal: string; judul: string; jenis: string; nomorSk: string; tanggalSk: string; pasal: string; keadaan: KeadaanLampau }) => {
+        const e = await entriSederhana(tx, "S16", { kelas: "arsip", judul: m.judul, ringkasan: m.judul, tanggal: "2026-09-21", peristiwa: m.tanggalSk, tahun: m.tahun, pegawai: pg, regulasiKode: "PP_53_2010", catatan: "Dicatat dari arsip fisik (pindaian SK).", keadaan: m.keadaan });
         const [j] = await tx`select j.id, j.kode, j.nama, j.durasi_bulan, t.nama as tingkat, t.kode as tingkat_kode from jenis_hukuman j join tingkat_hukuman t on t.id = j.tingkat_hukuman_id
           join regulasi r on r.id = j.regulasi_id where r.kode = 'PP_53_2010' and j.kode = ${m.jenis}`;
         await tx`update entri set jenis_hukuman_id = ${j.id} where id = ${e.id}`;
@@ -966,8 +970,8 @@ export const SKENARIO: Skenario[] = [
         await tx`insert into pelanggaran_entri (entri_id, pasal_teks_bebas, uraian_perbuatan, urutan, created_by, updated_by) values (${e.id}, ${m.pasal}, ${m.judul}, 1, ${C.P.id}, ${C.P.id})`;
         await berkas(tx, e.id, `Pindaian SK ${m.tahun}.pdf`, pdf("PINDAIAN ARSIP KEPUTUSAN", [`Nomor ${m.nomorSk} tanggal ${m.tanggalSk}`, `${j.nama} kepada ${pg.nama_lengkap_gelar}, NIP ${pg.nip}.`, "", "[pindaian arsip fisik]"]), "application/pdf", "pindaian_arsip", { tanggal: "2026-09-21" });
       };
-      await arsip(p5, { tahun: 2019, tanggal: "2019-03-11", judul: "Tidak masuk kerja 8 hari kerja tanpa alasan sah (2019)", jenis: "teguran_tertulis", nomorSk: "1102/UN32/KP/2019", tanggalSk: "2019-03-11", pasal: "PP 53/2010 Pasal 3 angka 11" });
-      await arsip(lain, { tahun: 2017, tanggal: "2017-10-02", judul: "Tidak menaati ketentuan jam kerja (2017)", jenis: "tunda_kgb", nomorSk: "3341/UN32/KP/2017", tanggalSk: "2017-10-02", pasal: "PP 53/2010 Pasal 3 angka 11" });
+      await arsip(p5, { tahun: 2019, tanggal: "2019-03-11", judul: "Tidak masuk kerja 8 hari kerja tanpa alasan sah (2019)", jenis: "teguran_tertulis", nomorSk: "1102/UN32/KP/2019", tanggalSk: "2019-03-11", pasal: "PP 53/2010 Pasal 3 angka 11", keadaan: { jabatan: "Asisten Ahli", pangkat: "Penata Muda Tingkat I", golongan_ruang: "III/b", golongan_pangkat: "III/b - Penata Muda Tingkat I" } });
+      await arsip(lain, { tahun: 2017, tanggal: "2017-10-02", judul: "Tidak menaati ketentuan jam kerja (2017)", jenis: "tunda_kgb", nomorSk: "3341/UN32/KP/2017", tanggalSk: "2017-10-02", pasal: "PP 53/2010 Pasal 3 angka 11", keadaan: {} });
     },
   },
 ];

@@ -28,11 +28,11 @@ export default async function DaftarKasus({ searchParams }: { searchParams: Prom
     ${sp.tingkat ? sql`and th.kode = ${sp.tingkat}` : sql``}
     ${sp.rezim ? sql`and e.rezim_kode = ${sp.rezim}` : sql``}
     ${sp.pic === "saya" ? sql`and e.pic_user_id = ${p.id}` : sql``}
-    ${pola ? sql`and (e.judul ilike ${pola} or e.nomor_registrasi ilike ${pola} or pg.nama_lengkap_gelar ilike ${pola} or pg.nip ilike ${pola})` : sql``}`;
+    ${pola ? sql`and (e.judul ilike ${pola} or e.nomor_registrasi ilike ${pola} or pg.nama_lengkap_gelar ilike ${pola} or pg.nip ilike ${pola} or e.snapshot_pegawai->>'nama_lengkap_gelar' ilike ${pola})` : sql``}`;
 
   const [rows, [{ total }], status, tingkat, rezim, kal, ambang] = await Promise.all([
     sql`select e.id, e.nomor_registrasi, e.judul, e.status_kasus, s.nama as status_nama, s.kelompok, e.rezim_kode, e.pemotongan_ik,
-          pg.nama_lengkap_gelar as nama, pg.nip, th.nama as tingkat, e.snapshot_regulasi->>'nama_singkat' as regulasi, u.nama as pic,
+          coalesce(e.snapshot_pegawai->>'nama_lengkap_gelar', pg.nama_lengkap_gelar) as nama, coalesce(e.snapshot_pegawai->>'nip', pg.nip) as nip, th.nama as tingkat, e.snapshot_regulasi->>'nama_singkat' as regulasi, u.nama as pic,
           t.nama as tahap, t.tenggat, t.tenggat_info->>'sifat' as sifat
         from entri e join status_kasus s on s.kode = e.status_kasus left join pegawai pg on pg.id = e.pegawai_id
         left join tingkat_hukuman th on th.id = e.tingkat_hukuman_dugaan_id left join app_users u on u.id = e.pic_user_id

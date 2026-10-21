@@ -67,6 +67,10 @@ export default async function DetailArsip({ params }: { params: Promise<{ id: st
             <Rincian
               items={[
                 { label: "Pegawai", nilai: e.nama_pegawai ? `${e.nama_pegawai}${e.nip_pegawai ? ` · ${e.nip_pegawai}` : ""}` : "—", pii: true },
+                {
+                  label: e.snapshot_pegawai?.keadaan === "saat_kejadian" ? "Jabatan & pangkat saat kejadian" : "Jabatan & pangkat (data saat dicatat, bukan saat kejadian)",
+                  nilai: [e.snapshot_pegawai?.jabatan, [e.snapshot_pegawai?.pangkat, e.snapshot_pegawai?.golongan_ruang].filter(Boolean).join(", "), e.snapshot_pegawai?.unit_kerja].filter(Boolean).join(" · ") || "—",
+                },
                 { label: "Tahun / tanggal kejadian", nilai: e.tanggal_peristiwa ? tanggalPanjang(e.tanggal_peristiwa) : e.tahun_peristiwa },
                 { label: "Peraturan saat itu", nilai: e.snapshot_regulasi?.nama_singkat ?? e.regulasi_singkat ?? "Tidak dicatat" },
                 { label: "Kelengkapan berkas", nilai: labelLengkap[e.kelengkapan_berkas] ?? "Belum dinilai" },

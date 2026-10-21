@@ -30,7 +30,7 @@ export default async function DaftarInformasi({ searchParams }: { searchParams: 
 
   const [rows, [{ total }], sumberRef] = await Promise.all([
     sql`select e.id, e.nomor_registrasi, e.judul, e.created_at, e.tanggal_peristiwa, e.sumber_informasi, e.pelapor_nama, e.status_kasus,
-          s.nama as status_nama, s.kelompok, coalesce(pg.nama_lengkap_gelar, e.nama_pegawai_bebas) as nama, coalesce(pg.nip, e.nip_bebas) as nip,
+          s.nama as status_nama, s.kelompok, coalesce(e.snapshot_pegawai->>'nama_lengkap_gelar', pg.nama_lengkap_gelar, e.nama_pegawai_bebas) as nama, coalesce(e.snapshot_pegawai->>'nip', pg.nip, e.nip_bebas) as nip,
           (select count(*) from berkas b where b.entri_id = e.id and b.diarsipkan_pada is null)::int as jml_berkas
         from entri e join status_kasus s on s.kode = e.status_kasus left join pegawai pg on pg.id = e.pegawai_id
         where ${where} order by e.created_at desc limit ${PER} offset ${(hal - 1) * PER}`,

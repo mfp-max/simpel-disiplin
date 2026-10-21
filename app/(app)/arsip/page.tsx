@@ -29,7 +29,7 @@ export default async function DaftarArsip({ searchParams }: { searchParams: Prom
 
   const [rows, [{ total }], kelengkapan, regulasi, dekade] = await Promise.all([
     sql`select e.id, e.nomor_registrasi, e.judul, e.tahun_peristiwa, e.kelengkapan_berkas, r.nama_singkat as regulasi,
-          coalesce(pg.nama_lengkap_gelar, e.nama_pegawai_bebas) as nama, coalesce(pg.nip, e.nip_bebas) as nip,
+          coalesce(e.snapshot_pegawai->>'nama_lengkap_gelar', pg.nama_lengkap_gelar, e.nama_pegawai_bebas) as nama, coalesce(e.snapshot_pegawai->>'nip', pg.nip, e.nip_bebas) as nip,
           coalesce(h.snapshot_jenis_hukuman->>'nama', '') as hukuman,
           (select count(*) from berkas b where b.entri_id = e.id and b.diarsipkan_pada is null)::int as jml_berkas
         from entri e left join pegawai pg on pg.id = e.pegawai_id left join regulasi r on r.id = e.regulasi_id

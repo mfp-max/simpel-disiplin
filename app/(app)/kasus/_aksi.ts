@@ -8,7 +8,7 @@ import { GalatPengguna, jalankan } from "@/lib/galat";
 import { buatKasus, catatHukuman, gantiTingkat, pratinjauKasus, segarkanTenggat, selaraskanStatus, selesaikanTahap, tambahPelanggaran, type MasukanKasus, type MasukanPratinjau } from "@/lib/kasus";
 import { muatAturan, muatKalender } from "@/lib/regulasi";
 import { hitungTanggalTenggat, usulTingkatPelanggaran, validasiTim } from "@/lib/hukdis/mesin";
-import { ambilPegawai, peringkatGolongan } from "@/lib/entri";
+import { ambilPegawai, peringkatGolongan, snapshotAnggota } from "@/lib/entri";
 
 function segarkan(id?: string) {
   revalidatePath("/kasus");
@@ -220,9 +220,9 @@ export async function tambahAnggotaAksi(entriId: string, a: MasukanAnggota) {
       if (a.jabatanDalamTim !== "anggota" && ada.some((x) => x.jabatan_dalam_tim === a.jabatanDalamTim)) throw new GalatPengguna(`Tim sudah memiliki ${a.jabatanDalamTim}.`);
       const [{ n }] = await tx`select coalesce(max(urutan), 0)::int + 1 as n from anggota_tim where tim_id = ${tim.id}`;
       const [row] = await tx`insert into anggota_tim (tim_id, pegawai_id, nama_bebas, nip_bebas, jabatan_bebas, golongan_ruang, unsur, jabatan_dalam_tim,
-          pernyataan_bebas_konflik, eselon_setara, urutan, created_by, updated_by)
+          pernyataan_bebas_konflik, eselon_setara, urutan, snapshot_pegawai, created_by, updated_by)
         values (${tim.id}, ${pg?.id ?? null}, ${pg ? null : a.namaBebas?.trim() || null}, ${pg ? null : a.nipBebas || null}, ${pg ? null : a.jabatanBebas || null},
-          ${golAnggota}, ${a.unsur}, ${a.jabatanDalamTim}, true, ${calon.peringkat}, ${n}, ${p.id}, ${p.id}) returning id`;
+          ${golAnggota}, ${a.unsur}, ${a.jabatanDalamTim}, true, ${calon.peringkat}, ${n}, ${pg ? tx.json(snapshotAnggota(pg) as never) : null}, ${p.id}, ${p.id}) returning id`;
       await catatAudit(p, { aksi: "buat", tabel: "anggota_tim", record_id: row.id, entri_id: entriId, ringkasan: { nama: calon.nama, unsur: a.unsur, jabatan_dalam_tim: a.jabatanDalamTim } }, tx);
       // Peringatan komposisi setelah penambahan
       const semua = [...ada.map((x) => ({ nama: x.nama, unsur: x.unsur, jabatan_dalam_tim: x.jabatan_dalam_tim, peringkat: null })), calon];

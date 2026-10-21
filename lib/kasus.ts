@@ -9,7 +9,7 @@ import {
   jenisEfektif, kenaPemotonganIk, susunTahapanKasus, type KewenanganKasus,
 } from "@/lib/hukdis/mesin";
 import type { AturanLengkap, Tahapan } from "@/lib/hukdis/jenis";
-import { ambilPegawai, konteksPegawai, nomorRegistrasi, rezimDariStatus, snapshotPegawai, type PegawaiLengkap } from "@/lib/entri";
+import { ambilPegawai, konteksPegawai, nomorRegistrasi, rezimDariStatus, snapshotPegawaiLengkap, type PegawaiLengkap } from "@/lib/entri";
 
 export type MasukanPratinjau = {
   pegawaiId: string | null;
@@ -118,13 +118,14 @@ export async function buatKasus(tx: Sql, m: MasukanKasus, userId: string) {
   const tahun = Number(m.tanggalPeristiwa.slice(0, 4));
   const nomor = await nomorRegistrasi(tx, "hukdis", new Date().getFullYear());
   const statusAwal = p.tahapan[0]?.status_kasus ?? "telaah";
+  const salinanPegawai = await snapshotPegawaiLengkap(p.pegawai!, tx);
 
   const [e] = await tx`insert into entri (nomor_registrasi, kelas, judul, ringkasan, tanggal_peristiwa, tahun_peristiwa, pegawai_id,
       unit_kerja_id, snapshot_pegawai, regulasi_id, rezim_kode, snapshot_regulasi, status_kasus, tingkat_hukuman_dugaan_id,
       sumber_informasi, pelapor_nama, pelapor_kontak, ada_bukti, hitung_dalam_sla, pemotongan_ik, kalkulasi, berasal_dari_id,
       pic_user_id, created_by, updated_by)
     values (${nomor}, 'hukdis', ${m.judul.trim()}, ${m.ringkasan ?? null}, ${m.tanggalPeristiwa}, ${tahun}, ${p.pegawai!.id},
-      ${p.pegawai!.unit_kerja_id}, ${tx.json(snapshotPegawai(p.pegawai!) as never)}, ${p.regulasi.id}, ${p.rezimKode},
+      ${p.pegawai!.unit_kerja_id}, ${tx.json(salinanPegawai as never)}, ${p.regulasi.id}, ${p.rezimKode},
       ${tx.json(snapshotRegulasi(p.regulasi) as never)}, ${statusAwal}, ${tingkatRow.id}, ${m.sumberInformasi ?? null},
       ${m.pelaporNama ?? null}, ${m.pelaporKontak ?? null}, ${m.adaBukti ?? false}, true, ${p.pemotonganIk},
       ${tx.json({ kewenangan: ringkasKewenangan(p.kewenangan), usulan_kehadiran: p.usulanKehadiran, tingkat: { kode: tingkat.kode, nama: tingkat.nama }, dihitung_pada: new Date().toISOString() } as never)},

@@ -1,16 +1,28 @@
 // Menjalankan berkas SQL di supabase/migrations secara berurutan, sekali saja per berkas.
 // Pakai: npm run db:migrate
+// Saat build produksi Vercel (`vercel-build` → --saat-build) migrasi berjalan otomatis memakai
+// DATABASE_URL produksi; build pratinjau dilewati agar cabang uji tidak mengubah basis data produksi.
+// Bila migrasi gagal, build gagal dan versi lama tetap tayang.
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import postgres from "postgres";
 
-const url = process.env.DATABASE_URL_MIGRASI || process.env.DATABASE_URL;
-if (!url) {
-  console.error("DATABASE_URL_MIGRASI belum diisi di .env.local");
-  process.exit(1);
+if (process.argv.includes("--saat-build") && process.env.VERCEL_ENV !== "production") {
+  console.log(`Migrasi dilewati: bukan build produksi (VERCEL_ENV=${process.env.VERCEL_ENV ?? "-"}).`);
+  process.exit(0);
 }
 
-const sql = postgres(url, { ssl: "require", prepare: false, max: 1, onnotice: () => {} });
+const mentah = process.env.DATABASE_URL_MIGRASI || process.env.DATABASE_URL;
+if (!mentah) {
+  console.error("DATABASE_URL_MIGRASI / DATABASE_URL belum diisi");
+  process.exit(1);
+}
+// Pooler Supabase mode transaksi (6543) bisa macet untuk kueri berparameter — pakai mode sesi (lihat lib/db.ts).
+const u = new URL(mentah);
+if (u.hostname.endsWith(".pooler.supabase.com") && u.port === "6543") u.port = "5432";
+const url = u.toString();
+
+const sql = postgres(url, { ssl: u.searchParams.get("sslmode") === "disable" ? false : "require", prepare: false, max: 1, onnotice: () => {} });
 const folder = join(process.cwd(), "supabase", "migrations");
 
 try {

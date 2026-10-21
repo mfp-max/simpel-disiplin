@@ -247,20 +247,23 @@ async function TabPelanggaran({ id, regulasiId, namaRegulasi, boleh }: { id: str
 
 async function TabTim({ id, kw, snapPg, boleh, pegawaiId }: { id: string; kw: Kalkulasi["kewenangan"]; snapPg: Record<string, string | null>; boleh: boolean; pegawaiId: string | null }) {
   if (kw?.bentuk_tim === "tidak") {
-    const [atasan] = pegawaiId ? await sql`select a.nama_lengkap_gelar, a.nip, coalesce(nullif(a.jabatan_tambahan,''), a.jabatan_fungsional) as jabatan
+    // Atasan saat kasus dicatat (salinan beku); cadangan: pejabat penilai di master pegawai terkini.
+    const [kini] = !snapPg.atasan_nama && pegawaiId ? await sql`select a.nama_lengkap_gelar, a.nip, coalesce(nullif(a.jabatan_tambahan,''), a.jabatan_fungsional) as jabatan
       from pegawai p join pegawai a on a.nip = p.pejabat_penilai_nip where p.id = ${pegawaiId}` : [];
+    const atasan = snapPg.atasan_nama ? { nama_lengkap_gelar: snapPg.atasan_nama, nip: snapPg.atasan_nip, jabatan: snapPg.atasan_jabatan } : kini;
     return (
       <Panel judul="Pemeriksa: atasan langsung">
         <Catatan>Untuk tingkat ini tidak dibentuk Tim Pemeriksa; pemeriksaan dilakukan oleh atasan langsung{kw.pemeriksa?.pasal_rujukan ? ` (${kw.pemeriksa.pasal_rujukan})` : ""}.</Catatan>
-        <div className="mt-4"><Rincian items={[{ label: "Atasan langsung (dari pejabat penilai Simpega)", nilai: atasan ? `${atasan.nama_lengkap_gelar} · ${atasan.nip}${atasan.jabatan ? ` · ${atasan.jabatan}` : ""}` : "Belum diketahui — lengkapi data pejabat penilai di master pegawai", pii: true, lebar: true }]} /></div>
+        <div className="mt-4"><Rincian items={[{ label: snapPg.atasan_nama ? "Atasan langsung (saat kasus dicatat)" : "Atasan langsung (dari pejabat penilai Simpega)", nilai: atasan ? `${atasan.nama_lengkap_gelar} · ${atasan.nip}${atasan.jabatan ? ` · ${atasan.jabatan}` : ""}` : "Belum diketahui — lengkapi data pejabat penilai di master pegawai", pii: true, lebar: true }]} /></div>
       </Panel>
     );
   }
   const [[tim], unsur, jabatan, jenisTim] = await Promise.all([
     sql`select * from tim_pemeriksa where entri_id = ${id} limit 1`, referensi("unsur_tim"), referensi("jabatan_dalam_tim"), referensi("jenis_tim"),
   ]);
-  const anggota = tim ? await sql`select a.*, coalesce(p.nama_lengkap_gelar, a.nama_bebas) as nama, coalesce(p.nip, a.nip_bebas) as nip,
-      coalesce(nullif(p.jabatan_tambahan,''), p.jabatan_fungsional, a.jabatan_bebas) as jabatan from anggota_tim a left join pegawai p on p.id = a.pegawai_id where a.tim_id = ${tim.id} order by a.urutan` : [];
+  const anggota = tim ? await sql`select a.*, coalesce(a.snapshot_pegawai->>'nama_lengkap_gelar', p.nama_lengkap_gelar, a.nama_bebas) as nama,
+      coalesce(a.snapshot_pegawai->>'nip', p.nip, a.nip_bebas) as nip,
+      coalesce(a.snapshot_pegawai->>'jabatan', nullif(p.jabatan_tambahan,''), p.jabatan_fungsional, a.jabatan_bebas) as jabatan from anggota_tim a left join pegawai p on p.id = a.pegawai_id where a.tim_id = ${tim.id} order by a.urutan` : [];
   const labelUnsur = Object.fromEntries(unsur.map((u) => [u.kode, u.label]));
   const labelJab = Object.fromEntries(jabatan.map((u) => [u.kode, u.label]));
   return (

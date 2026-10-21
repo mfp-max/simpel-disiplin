@@ -25,14 +25,60 @@ export async function ambilPegawai(id: string, db: Sql = sql): Promise<PegawaiLe
   return (p as unknown as PegawaiLengkap) ?? null;
 }
 
-/** Salinan beku identitas terperiksa saat kasus dibuat (pangkat/jabatan bisa berubah kelak). */
-export function snapshotPegawai(p: PegawaiLengkap) {
+export type AtasanBeku = { nama: string; nip: string | null; jabatan: string | null };
+
+/**
+ * Salinan beku identitas terperiksa saat kasus dibuat. Pangkat, jabatan, unit, bahkan
+ * atasan langsung bisa berubah kelak (naik jabatan, mutasi, impor Simpega terbaru),
+ * tetapi riwayat kasus & dokumennya harus tetap memakai keadaan saat itu.
+ * Untuk entri hukdis, salinan ini dikunci pemicu basis data (0009_riwayat_pegawai.sql).
+ */
+export function snapshotPegawai(p: PegawaiLengkap, atasan?: AtasanBeku | null) {
   return {
     id: p.id, nip: p.nip, nama_lengkap_gelar: p.nama_lengkap_gelar, nama_tanpa_gelar: p.nama_tanpa_gelar, status_pegawai: p.status_pegawai,
     pangkat: p.pangkat, golongan_ruang: p.golongan_ruang, golongan_pangkat: p.golongan_pangkat,
     jabatan: p.jabatan_tambahan || p.jabatan_fungsional || p.jenis_pegawai, jabatan_fungsional: p.jabatan_fungsional, jabatan_tambahan: p.jabatan_tambahan,
     unit_kerja: p.unit_kerja, direktorat_fakultas: p.direktorat_fakultas, tempat_lahir: p.tempat_lahir, tanggal_lahir: p.tanggal_lahir,
-    kelompok_jabatan: p.kelompok_jabatan, dicatat_pada: new Date().toISOString(),
+    kelompok_jabatan: p.kelompok_jabatan,
+    pejabat_penilai_nip: p.pejabat_penilai_nip,
+    ...(atasan ? { atasan_nama: atasan.nama, atasan_nip: atasan.nip, atasan_jabatan: atasan.jabatan } : {}),
+    dicatat_pada: new Date().toISOString(),
+  };
+}
+
+/** Atasan langsung (pejabat penilai) pegawai menurut master pegawai saat ini. */
+export async function ambilAtasan(p: Pick<PegawaiLengkap, "pejabat_penilai_nip"> | null, db: Sql = sql): Promise<AtasanBeku | null> {
+  if (!p?.pejabat_penilai_nip) return null;
+  const [a] = await db`select nama_lengkap_gelar, nip, coalesce(nullif(jabatan_tambahan, ''), jabatan_fungsional, jenis_pegawai) as jabatan
+    from pegawai where nip = ${p.pejabat_penilai_nip} limit 1`;
+  return a ? { nama: a.nama_lengkap_gelar as string, nip: a.nip as string | null, jabatan: a.jabatan as string | null } : null;
+}
+
+/** Salinan beku lengkap (termasuk atasan langsung saat itu) — dipakai saat entri dibuat. */
+export async function snapshotPegawaiLengkap(p: PegawaiLengkap, db: Sql = sql) {
+  return snapshotPegawai(p, await ambilAtasan(p, db));
+}
+
+export type KeadaanLampau = { jabatan?: string | null; pangkat?: string | null; golongan_ruang?: string | null; golongan_pangkat?: string | null; unit_kerja?: string | null };
+
+/**
+ * Arsip kasus lampau: data master berisi keadaan pegawai SEKARANG, bukan saat kejadian.
+ * Isian "saat kejadian" dari petugas menimpa salinan; bila tidak diisi, salinan ditandai
+ * `keadaan: "saat_dicatat"` agar tampilan tidak menyiratkan itu jabatan saat kejadian.
+ */
+export function salinanArsip(dasar: Record<string, unknown> | null, k: KeadaanLampau, bebas?: { nama?: string | null; nip?: string | null }) {
+  const isi = Object.fromEntries(Object.entries(k).filter(([, v]) => typeof v === "string" && v.trim()).map(([a, v]) => [a, (v as string).trim()]));
+  if (!dasar && !bebas?.nama && !Object.keys(isi).length) return null;
+  const base = dasar ?? { nama_lengkap_gelar: bebas?.nama ?? null, nip: bebas?.nip ?? null, dicatat_pada: new Date().toISOString() };
+  return { ...base, ...isi, keadaan: Object.keys(isi).length ? "saat_kejadian" : "saat_dicatat" };
+}
+
+/** Salinan beku anggota Tim Pemeriksa saat ditetapkan (pangkat/jabatan anggota juga bisa berubah kelak). */
+export function snapshotAnggota(p: PegawaiLengkap) {
+  return {
+    id: p.id, nip: p.nip, nama_lengkap_gelar: p.nama_lengkap_gelar, pangkat: p.pangkat, golongan_ruang: p.golongan_ruang,
+    golongan_pangkat: p.golongan_pangkat, jabatan: p.jabatan_tambahan || p.jabatan_fungsional || p.jenis_pegawai,
+    unit_kerja: p.unit_kerja, dicatat_pada: new Date().toISOString(),
   };
 }
 
@@ -75,8 +121,11 @@ export async function peringkatGolongan(db: Sql = sql) {
 export async function ringkasEntri(id: string, db: Sql = sql) {
   const [e] = await db`
     select e.*, k.nama as kelas_nama, s.nama as status_nama, s.kelompok as status_kelompok,
-      coalesce(p.nama_lengkap_gelar, e.nama_pegawai_bebas) as nama_pegawai, coalesce(p.nip, e.nip_bebas) as nip_pegawai,
-      p.status_pegawai, p.unit_kerja as unit_pegawai, r.nama_singkat as regulasi_singkat, rz.nama as rezim_nama,
+      -- Identitas dari salinan beku entri (keadaan saat dicatat), bukan master pegawai terkini.
+      coalesce(e.snapshot_pegawai->>'nama_lengkap_gelar', p.nama_lengkap_gelar, e.nama_pegawai_bebas) as nama_pegawai,
+      coalesce(e.snapshot_pegawai->>'nip', p.nip, e.nip_bebas) as nip_pegawai,
+      coalesce(e.snapshot_pegawai->>'status_pegawai', p.status_pegawai) as status_pegawai,
+      coalesce(e.snapshot_pegawai->>'unit_kerja', p.unit_kerja) as unit_pegawai, r.nama_singkat as regulasi_singkat, rz.nama as rezim_nama,
       th.nama as tingkat_nama, th.kode as tingkat_kode, jh.nama as jenis_nama, uk.nama as unit_nama
     from entri e
     join kelas_entri k on k.kode = e.kelas
