@@ -10,7 +10,7 @@ import { tanggalPanjang, tanggalPendek, waktuPendek } from "@/lib/format";
 import { muatAturan, resolveRegulasi } from "@/lib/regulasi";
 import { ambangBerikutnya, hitungAmbangKehadiran } from "@/lib/hukdis/mesin";
 import { FIELD_PEGAWAI, LABEL_KOLOM } from "@/lib/simpega/normalisasi";
-import { DialogRezim, DialogUbahPegawai, GridKehadiran, TombolLepasManual } from "./pegawai_klien";
+import { DialogKeaktifan, DialogRezim, DialogUbahPegawai, GridKehadiran, TombolLepasManual } from "./pegawai_klien";
 
 export const metadata = { title: "Detail Pegawai" };
 
@@ -46,7 +46,7 @@ export default async function DetailPegawai({ params }: { params: Promise<{ id: 
       : Promise.resolve([]),
     nipAtasan.length ? sql`select id, nip, nama_lengkap_gelar from pegawai where nip in ${sql(nipAtasan)}` : Promise.resolve([]),
     sql`select e.id, e.kelas, e.nomor_registrasi, e.judul, e.status_kasus, s.nama as status_nama, s.kelompok, k.nama as kelas_nama,
-          e.tanggal_peristiwa, e.tahun_peristiwa, e.created_at, e.diarsipkan_pada
+          e.tanggal_peristiwa, e.tahun_peristiwa, e.created_at, e.diarsipkan_pada, e.snapshot_pegawai
         from entri e join status_kasus s on s.kode = e.status_kasus join kelas_entri k on k.kode = e.kelas
         where e.pegawai_id = ${id} order by coalesce(e.tanggal_peristiwa, make_date(coalesce(e.tahun_peristiwa, 1900), 1, 1)) desc, e.created_at desc`,
     sql`select h.id, h.entri_id, h.snapshot_jenis_hukuman, h.nomor_sk, h.tanggal_sk, h.tanggal_mulai_berlaku, h.tanggal_selesai,
@@ -112,8 +112,13 @@ export default async function DetailPegawai({ params }: { params: Promise<{ id: 
         kembali={{ href: "/pegawai", label: "Daftar pegawai" }}
         judul={<Pii>{pg.nama_lengkap_gelar}</Pii>}
         lencana={<LencanaRezim kode={pg.rezim_kode} nama={pg.rezim_nama} />}
-        deskripsi={<><Pii>{pg.nip ? `NIP ${pg.nip}` : "Tanpa NIP"}</Pii>{pg.status_pegawai ? ` · ${pg.status_pegawai}` : ""}{pg.aktif ? "" : " · tidak aktif"}</>}
-        aksi={bolehKelola ? <DialogUbahPegawai id={id} awal={awalForm} /> : null}
+        deskripsi={<><Pii>{pg.nip ? `NIP ${pg.nip}` : "Tanpa NIP"}</Pii>{pg.status_pegawai ? ` · ${pg.status_pegawai}` : ""}{pg.aktif ? "" : ` · tidak aktif${pg.data_tambahan?.alasan_keluar ? ` (${String(pg.data_tambahan.alasan_keluar).toLowerCase()}${pg.tanggal_keluar ? `, ${tanggalPendek(pg.tanggal_keluar)}` : ""})` : ""}`}</>}
+        aksi={bolehKelola ? (
+          <div className="flex flex-wrap gap-2">
+            <DialogUbahPegawai id={id} awal={awalForm} />
+            <DialogKeaktifan id={id} aktif={pg.aktif} tanggalKeluar={pg.tanggal_keluar ?? null} alasanKeluar={(pg.data_tambahan?.alasan_keluar as string | undefined) ?? null} />
+          </div>
+        ) : null}
       />
 
       <div className="space-y-6">
@@ -250,7 +255,7 @@ export default async function DetailPegawai({ params }: { params: Promise<{ id: 
           </div>
         </Panel>
 
-        <Panel judul="Riwayat kasus & catatan" deskripsi="Semua registrasi informasi, pembinaan, arsip, dan kasus hukuman disiplin atas pegawai ini.">
+        <Panel judul="Riwayat kasus & catatan" deskripsi="Semua registrasi informasi, pembinaan, arsip, dan kasus atas pegawai ini. Jabatan & pangkat di setiap baris adalah keadaan saat dicatat — tidak ikut berubah bila data pegawai di atas diperbarui.">
           {entri.length === 0 ? (
             <Kosong ikon={Gavel} judul="Belum ada catatan" deskripsi="Pegawai ini belum pernah tercatat dalam registrasi informasi, pembinaan, arsip, maupun kasus." />
           ) : (
@@ -264,6 +269,7 @@ export default async function DetailPegawai({ params }: { params: Promise<{ id: 
                         {e.nomor_registrasi} · {e.kelas_nama}
                         {e.tanggal_peristiwa ? ` · ${tanggalPendek(e.tanggal_peristiwa)}` : e.tahun_peristiwa ? ` · ${e.tahun_peristiwa}` : ""}
                       </p>
+                      <SaatItu s={e.snapshot_pegawai as Record<string, string> | null} kini={pg} />
                       <div className="flex flex-wrap gap-1.5">
                         <LencanaStatus nama={e.status_nama} kelompok={e.kelompok} />
                         {e.diarsipkan_pada && <Lencana>diarsipkan</Lencana>}
@@ -311,6 +317,23 @@ export default async function DetailPegawai({ params }: { params: Promise<{ id: 
         )}
       </div>
     </>
+  );
+}
+
+/** Keadaan pegawai saat entri dicatat (salinan beku), dibandingkan dengan data sekarang. */
+function SaatItu({ s, kini }: { s: Record<string, string> | null; kini: Record<string, unknown> }) {
+  if (!s) return null;
+  const pangkat = [s.pangkat, s.golongan_ruang].filter(Boolean).join(", ");
+  const teks = [s.jabatan, pangkat, s.unit_kerja].filter(Boolean).join(" · ");
+  if (!teks) return null;
+  const jabatanKini = (kini.jabatan_tambahan as string) || (kini.jabatan_fungsional as string) || (kini.jenis_pegawai as string) || "";
+  const beda = (!!s.jabatan && s.jabatan !== jabatanKini) || (!!s.golongan_ruang && s.golongan_ruang !== kini.golongan_ruang);
+  const label = s.keadaan === "saat_dicatat" ? "Data saat dicatat (bukan saat kejadian)" : "Saat itu";
+  return (
+    <p className="text-sm">
+      <span className="text-muted-foreground">{label}:</span> <Pii>{teks}</Pii>
+      {beda && <Lencana warna="info" className="ml-1.5 align-middle">berbeda dengan sekarang</Lencana>}
+    </p>
   );
 }
 

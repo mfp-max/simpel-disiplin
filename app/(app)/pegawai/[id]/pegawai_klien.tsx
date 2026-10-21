@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Loader2, Pencil, Save, X } from "lucide-react";
+import { Loader2, Pencil, Save, UserCheck, UserX, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DialogAlasan, useAksi } from "@/components/simpel/interaktif";
 import { namaBulan } from "@/lib/format";
 import { FIELD_PEGAWAI } from "@/lib/simpega/normalisasi";
-import { lepasFieldManual, simpanKehadiran, ubahPegawai, ubahRezim, type IsiKehadiran } from "./_aksi";
+import { lepasFieldManual, simpanKehadiran, ubahKeaktifan, ubahPegawai, ubahRezim, type IsiKehadiran } from "./_aksi";
+import { ALASAN_KELUAR } from "../pegawai_baru_klien";
 
 const kelasSelect =
   "h-11 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
@@ -170,5 +171,60 @@ export function GridKehadiran({ id, tahun, awal, bolehUbah }: { id: string; tahu
         )}
       </div>
     </form>
+  );
+}
+
+export function DialogKeaktifan({ id, aktif, tanggalKeluar, alasanKeluar }: { id: string; aktif: boolean; tanggalKeluar: string | null; alasanKeluar: string | null }) {
+  const [buka, setBuka] = useState(false);
+  const [jadiAktif, setJadiAktif] = useState(aktif);
+  const [tgl, setTgl] = useState(tanggalKeluar ?? "");
+  const [sebab, setSebab] = useState(alasanKeluar ?? "Pensiun");
+  const [ket, setKet] = useState("");
+  const { jalankan, sibuk } = useAksi();
+  return (
+    <Dialog open={buka} onOpenChange={(b) => { setBuka(b); if (b) { setJadiAktif(!aktif); setTgl(tanggalKeluar ?? ""); setSebab(alasanKeluar ?? "Pensiun"); setKet(""); } }}>
+      <DialogTrigger asChild>
+        <Button variant="outline">{aktif ? <UserX /> : <UserCheck />} {aktif ? "Tandai tidak aktif" : "Status keaktifan"}</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Status keaktifan pegawai</DialogTitle>
+          <DialogDescription>Riwayat kasus dan hukuman tidak berubah. Pegawai tidak aktif tetap dapat dicari untuk arsip dan riwayat.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="k-status">Status</Label>
+            <select id="k-status" className={kelasSelect} value={jadiAktif ? "aktif" : "tidak"} onChange={(e) => setJadiAktif(e.target.value === "aktif")}>
+              <option value="aktif">Aktif bekerja</option>
+              <option value="tidak">Tidak aktif (pensiun, meninggal, berhenti, …)</option>
+            </select>
+          </div>
+          {!jadiAktif && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="k-sebab">Alasan</Label>
+                <select id="k-sebab" className={kelasSelect} value={sebab} onChange={(e) => setSebab(e.target.value)}>
+                  {ALASAN_KELUAR.map((a) => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="k-tgl">Tanggal keluar / pensiun</Label>
+                <Input id="k-tgl" type="date" value={tgl} onChange={(e) => setTgl(e.target.value)} />
+              </div>
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <Label htmlFor="k-ket">Keterangan (wajib, tercatat di log audit)</Label>
+            <Textarea id="k-ket" rows={3} value={ket} onChange={(e) => setKet(e.target.value)} placeholder="mis. SK pensiun Nomor … tanggal …" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setBuka(false)}>Batal</Button>
+          <Button disabled={sibuk || ket.trim().length < 5} onClick={() => jalankan(() => ubahKeaktifan(id, jadiAktif, jadiAktif ? null : tgl || null, jadiAktif ? null : sebab, ket), { lalu: () => setBuka(false) })}>
+            {sibuk && <Loader2 className="animate-spin" />} Simpan
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

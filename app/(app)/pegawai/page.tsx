@@ -8,6 +8,7 @@ import { Halaman, NamaPegawai, TabelEntri } from "@/components/simpel/tabel-entr
 import { wajibMasuk } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { angka } from "@/lib/format";
+import { DialogTambahPegawai } from "./pegawai_baru_klien";
 
 export const metadata = { title: "Pegawai" };
 const PER = 25;
@@ -57,15 +58,19 @@ export default async function DaftarPegawai({ searchParams }: { searchParams: Pr
     return `/pegawai?${u}`;
   };
   const adaFilter = !!(q || status || rezim || unit);
+  const daftarStatus = (statusOpsi as unknown as { status_pegawai: string }[]).map((s) => s.status_pegawai);
   const aksiImpor = p.hak.kelola_pengaturan ? (
-    <Button asChild size="lg"><Link href="/pengaturan/impor"><Upload /> Impor dari Simpega</Link></Button>
+    <div className="flex flex-wrap gap-2">
+      <DialogTambahPegawai statusOpsi={daftarStatus} />
+      <Button asChild size="lg"><Link href="/pengaturan/impor"><Upload /> Impor dari Simpega</Link></Button>
+    </div>
   ) : null;
 
   return (
     <>
       <JudulHalaman
         judul="Pegawai"
-        deskripsi="Master pegawai hasil impor Simpega, beserta rezim disiplin dan riwayat kasusnya."
+        deskripsi="Master pegawai dari impor Simpega dan isian manual (mis. pegawai yang sudah pensiun), beserta rezim disiplin dan riwayat kasusnya."
         aksi={aksiImpor}
       />
 
@@ -74,7 +79,7 @@ export default async function DaftarPegawai({ searchParams }: { searchParams: Pr
           ikon={Users}
           judul="Belum ada data pegawai"
           deskripsi={p.hak.kelola_pengaturan
-            ? "Impor berkas Excel rekap Simpega agar pegawai bisa dipilih saat mencatat informasi atau membuat kasus."
+            ? "Impor berkas Excel rekap Simpega, atau tambahkan pegawai satu per satu secara manual, agar pegawai bisa dipilih saat mencatat informasi atau membuat kasus."
             : "Data pegawai belum diimpor. Minta admin mengimpor berkas Excel rekap Simpega."}
           aksi={aksiImpor}
         />
@@ -106,7 +111,7 @@ export default async function DaftarPegawai({ searchParams }: { searchParams: Pr
                 subKartu={(r) => [r.jabatan, r.unit_kerja].filter(Boolean).join(" · ") || "—"}
                 kolom={[
                   { judul: "Pegawai", isi: (r) => <NamaPegawai nama={r.nama_lengkap_gelar} nip={r.nip} />, kelas: "max-w-72" },
-                  { judul: "Status", isi: (r) => <Lencana>{r.status_pegawai ?? "—"}</Lencana>, ponsel: true },
+                  { judul: "Status", isi: (r) => <span className="flex flex-wrap gap-1"><Lencana>{r.status_pegawai ?? "—"}</Lencana>{!r.aktif && <Lencana warna="waspada">tidak aktif</Lencana>}</span>, ponsel: true },
                   { judul: "Rezim", isi: (r) => <LencanaRezim kode={r.rezim_kode} nama={r.rezim_nama} />, ponsel: true },
                   { judul: "Jabatan", isi: (r) => <span className="block max-w-56 truncate">{r.jabatan ?? "—"}{r.golongan_ruang ? ` · ${r.golongan_ruang}` : ""}</span> },
                   { judul: "Unit kerja", isi: (r) => <span className="block max-w-64"><span className="block truncate">{r.unit_kerja ?? "—"}</span>{r.direktorat_fakultas && r.direktorat_fakultas !== r.unit_kerja && <span className="block truncate text-xs text-muted-foreground">{r.direktorat_fakultas}</span>}</span> },

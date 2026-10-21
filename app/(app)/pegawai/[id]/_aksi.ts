@@ -107,7 +107,34 @@ export async function ubahRezim(id: string, rezim: string, alasan: string) {
   }, "Rezim pegawai diperbarui");
 }
 
-export type IsiKehadiran = { bulan: number; jumlah_hari: number | null; berturut_maks: number | null };
+/**
+ * Menandai pegawai aktif / tidak aktif (pensiun, meninggal, berhenti, …). Riwayat kasus
+ * tidak berubah; pegawai tidak aktif tetap bisa dicari untuk arsip & riwayat.
+ */
+export async function ubahKeaktifan(id: string, aktif: boolean, tanggalKeluar: string | null, alasanKeluar: string | null, alasan: string) {
+  return jalankan(async () => {
+    const p = await wajibHak("kelola_pengaturan");
+    if (!alasan?.trim() || alasan.trim().length < 5) throw new GalatPengguna("Keterangan wajib diisi (minimal 5 huruf).");
+    if (tanggalKeluar && !/^\d{4}-\d{2}-\d{2}$/.test(tanggalKeluar)) throw new GalatPengguna("Format tanggal keluar tidak valid.");
+    await transaksi(async (tx) => {
+      const [lama] = await tx`select aktif, tanggal_keluar, data_tambahan, field_manual from pegawai where id = ${id} for update`;
+      if (!lama) throw new GalatPengguna("Pegawai tidak ditemukan.");
+      const tambahan = { ...(lama.data_tambahan ?? {}), alasan_keluar: aktif ? null : alasanKeluar || null };
+      const keluar = aktif ? null : tanggalKeluar || lama.tanggal_keluar || null;
+      // tanggal_keluar yang diisi manual tidak ditimpa impor berikutnya
+      const manual = keluar && !(lama.field_manual ?? []).includes("tanggal_keluar") ? [...(lama.field_manual ?? []), "tanggal_keluar"] : lama.field_manual ?? [];
+      await tx`update pegawai set aktif = ${aktif}, tanggal_keluar = ${keluar}, data_tambahan = ${tx.json(tambahan)}, field_manual = ${manual}, updated_by = ${p.id} where id = ${id}`;
+      await catatAudit(p, {
+        aksi: "ubah", tabel: "pegawai", record_id: id, alasan: alasan.trim(),
+        ringkasan: selisih({ aktif: lama.aktif, tanggal_keluar: lama.tanggal_keluar, alasan_keluar: lama.data_tambahan?.alasan_keluar ?? null }, { aktif, tanggal_keluar: keluar, alasan_keluar: tambahan.alasan_keluar }),
+      }, tx);
+    });
+    revalidatePath(`/pegawai/${id}`);
+    revalidatePath("/pegawai");
+  }, aktif ? "Pegawai ditandai aktif" : "Pegawai ditandai tidak aktif");
+}
+
+export type IsiKehadiran ={ bulan: number; jumlah_hari: number | null; berturut_maks: number | null };
 
 /** Menyimpan catatan TMK (tidak masuk kerja) 12 bulan untuk satu tahun. */
 export async function simpanKehadiran(pegawaiId: string, tahun: number, isi: IsiKehadiran[]) {
