@@ -195,6 +195,15 @@ export function WizardImpor({ profil, statusDikenal }: { profil: Profil[]; statu
               disabled={membaca} onChange={(e) => { bacaBerkas(e.target.files?.[0]); e.target.value = ""; }} />
           </label>
           {galatBerkas && <Catatan jenis="lewat">{galatBerkas}</Catatan>}
+          <div className="flex flex-col gap-3 rounded-xl border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm">
+              <span className="font-medium">Belum punya berkasnya?</span> Unduh contoh format: nama kolomnya langsung dikenali, lengkap dengan petunjuk dan contoh isian.
+              Rekap asli Simpega juga bisa diunggah apa adanya.
+            </p>
+            <Button asChild variant="outline" className="shrink-0">
+              <a href="/contoh-format-impor-pegawai.xlsx" download="Contoh format impor pegawai SIMPEL.xlsx"><FileSpreadsheet aria-hidden /> Unduh contoh format</a>
+            </Button>
+          </div>
         </div>
       )}
 
