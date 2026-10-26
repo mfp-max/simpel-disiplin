@@ -3,12 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { wajibHak } from "@/lib/auth";
 import { GalatPengguna, jalankan } from "@/lib/galat";
-import { arsipkanSimulasi, jalankanSkenario } from "@/lib/simulasi";
+import { PESAN_MATI, arsipkanSimulasi, jalankanSkenario, simulasiDiizinkan } from "@/lib/simulasi";
 
 /** Membuat satu skenario data simulasi (satu transaksi). Dipanggil berurutan dari halaman agar ada kemajuan per skenario. */
 export async function buatSkenarioAksi(kode: string) {
   return jalankan(async () => {
     const p = await wajibHak("kelola_pengaturan");
+    if (!simulasiDiizinkan()) throw new GalatPengguna(PESAN_MATI);
     const r = await jalankanSkenario(kode, { pengguna: p, simpan: true });
     if (!r.ok) throw new GalatPengguna(`Skenario ${kode} gagal: ${r.pesan}`);
     revalidatePath("/", "layout");

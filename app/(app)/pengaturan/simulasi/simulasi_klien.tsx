@@ -25,7 +25,7 @@ export type BarisSkenario = {
 
 type Keadaan = { status: "menunggu" | "berjalan" | "berhasil" | "gagal"; pesan?: string; log?: string[] };
 
-export function PanelSimulasi({ baris }: { baris: BarisSkenario[] }) {
+export function PanelSimulasi({ baris, aktif }: { baris: BarisSkenario[]; aktif: boolean }) {
   const router = useRouter();
   const { jalankan, sibuk: sibukArsip } = useAksi();
   const [keadaan, setKeadaan] = useState<Record<string, Keadaan>>({});
@@ -67,7 +67,7 @@ export function PanelSimulasi({ baris }: { baris: BarisSkenario[] }) {
         deskripsi="Setiap skenario dibuat dalam satu transaksi: bila gagal, tidak ada data yang tertinggal. Skenario yang sudah ada dilewati."
         aksi={
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => buat(belum)} disabled={berjalan || !belum.length}>
+            <Button onClick={() => buat(belum)} disabled={!aktif || berjalan || !belum.length}>
               {berjalan ? <Loader2 className="animate-spin" aria-hidden /> : <FlaskConical aria-hidden />}
               {belum.length === baris.length ? "Buat semua data simulasi" : belum.length ? `Buat ${belum.length} skenario yang belum ada` : "Semua skenario sudah dibuat"}
             </Button>

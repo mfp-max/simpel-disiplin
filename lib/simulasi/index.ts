@@ -23,6 +23,16 @@ import { daftarQa, isiPertanyaanAwal, simpanJawaban, sisipkanPertanyaan } from "
 // Pegawai diambil dari master pegawai; tiap skenario memakai pegawai yang belum dipakai
 // skenario lain. Satu skenario = satu transaksi: bila gagal, tidak ada data yang tertinggal.
 
+/**
+ * Simulasi memakai pegawai dari master pegawai. Setelah data pegawai ASLI diimpor, kasus fiktif
+ * akan tercatat atas nama orang sungguhan — karena itu di server dimatikan kecuali variabel
+ * lingkungan SIMPEL_SIMULASI=1 (mis. lingkungan latihan). Skrip baris perintah tidak terpengaruh.
+ */
+export function simulasiDiizinkan() {
+  return process.env.SIMPEL_SIMULASI === "1";
+}
+export const PESAN_MATI = "Data simulasi dimatikan karena SIMPEL sudah dipakai untuk data pegawai sungguhan (kasus fiktif akan tercatat atas nama pegawai asli).";
+
 export type Penyimpanan = {
   unggah: (path: string, isi: Buffer, mime: string) => Promise<void>;
   unduh: (path: string) => Promise<Buffer>;

@@ -1,6 +1,6 @@
 import { Catatan, JudulHalaman } from "@/components/simpel/dasar";
 import { wajibHalamanHak } from "@/lib/auth";
-import { SKENARIO, daftarSimulasi } from "@/lib/simulasi";
+import { PESAN_MATI, SKENARIO, daftarSimulasi, simulasiDiizinkan } from "@/lib/simulasi";
 import { PanelSimulasi, type BarisSkenario } from "./simulasi_klien";
 
 export const metadata = { title: "Data simulasi" };
@@ -30,13 +30,16 @@ export default async function HalamanSimulasi() {
         deskripsi="Kasus contoh lengkap dengan dokumen dari template dan berkas pendukung, untuk pelatihan dan uji coba alur. Dibuat lewat fungsi yang sama dengan tombol-tombol di aplikasi dan tercatat di log audit."
         kembali={{ href: "/pengaturan", label: "Pengaturan" }}
       />
+      {!simulasiDiizinkan() ? (
+        <div className="mb-4"><Catatan jenis="info" judul="Dimatikan">{PESAN_MATI} Data simulasi yang masih ada tetap bisa diarsipkan dari halaman ini.</Catatan></div>
+      ) : null}
       <div className="mb-6">
         <Catatan jenis="waspada" judul="Hanya untuk latihan">
           Data simulasi memakai pegawai dari master pegawai dan ikut terhitung di Beranda serta Laporan. Sebelum SIMPEL dipakai untuk kasus sungguhan,
           tekan <strong>Arsipkan semua data simulasi</strong> (data tidak dihapus permanen, hanya disembunyikan dari daftar dan statistik).
         </Catatan>
       </div>
-      <PanelSimulasi baris={baris} />
+      <PanelSimulasi baris={baris} aktif={simulasiDiizinkan()} />
     </>
   );
 }
